@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LahainaTap - West Maui Daily Challenge</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overscroll-behavior: none;
+    }
+    header {
+      background: #1e293b;
+      padding: 10px 16px 8px;
+      text-align: center;
+      border-bottom: 1px solid #334155;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+    #top-bar {
+      display: none;
+      background: #1e293b;
+      padding: 8px 16px;
+      border-bottom: 1px solid #334155;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #top-bar.show { display: flex; }
+    #running-total {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    #progress { display: flex; gap: 5px; }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%; background: #334155;
+    }
+    .dot.done { background: #22c55e; }
+    .dot.current { background: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.35); }
+    #prompt {
+      background: #1e293b;
+      padding: 10px 16px 12px;
+      text-align: center;
+      border-bottom: 1px solid #334155;
+    }
+    #prompt .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 3px;
+    }
+    #address {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #f8fafc;
+      line-height: 1.35;
+    }
+    #map { flex: 1; min-height: 300px; width: 100%; background: #0f172a; }
+    #controls {
+      background: #1e293b;
+      padding: 16px 16px calc(56px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155;
+    }
+    .btn {
+      display: block; width: 100%; padding: 13px; border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary { background: #0ea5e9; color: #0f172a; }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .btn-secondary { background: #334155; color: #e2e8f0; margin-top: 8px; }
+    #round-result {
+      display: none;
+      background: #1e293b;
+      padding: 16px 16px calc(56px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155;
+      text-align: center;
+    }
+    #round-result.show { display: block; }
+    #round-score { font-size: 1.7rem; font-weight: 800; color: #38bdf8; }
+    #round-dist { font-size: 0.9rem; color: #94a3b8; margin: 4px 0 12px; }
+    #final-result {
+      display: none;
+      background: #1e293b;
+      padding: 20px 16px 36px;
+      border-top: 1px solid #334155;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    #final-result.show { display: block; }
+    #total-score {
+      font-size: 2.6rem; font-weight: 800; color: #38bdf8; line-height: 1;
+      transition: transform 0.4s ease;
+    }
+    #score-breakdown { font-size: 0.9rem; color: #94a3b8; margin: 8px 0 14px; }
+    #share-box {
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-word;
+      margin-bottom: 10px; text-align: left;
+    }
+    #status { text-align: center; padding: 8px 16px; font-size: 0.85rem; color: #94a3b8; background: #0f172a; }
+    .already-played { background: #1e293b; padding: 28px 16px; text-align: center; }
+    .already-played h2 { color: #fbbf24; margin-bottom: 8px; }
+    footer { text-align: center; padding: 8px; font-size: 0.65rem; color: #64748b; background: #0f172a; }
+    .particle {
+      position: absolute; width: 8px; height: 8px; border-radius: 2px;
+      pointer-events: none; opacity: 0.9; animation: fall 1.6s ease-out forwards;
+    }
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(180px) rotate(240deg); opacity: 0; }
+    }
+    #victory-banner {
+      font-size: 1.1rem; font-weight: 700; color: #fbbf24; margin-bottom: 6px;
+      opacity: 0; transform: scale(0.7);
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #victory-banner.show { opacity: 1; transform: scale(1); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>LahainaTap</h1>
+    <p>West Maui - Puamana to Kapalua</p>
+  </header>
+
+  <div id="status">Loading today's puzzle...</div>
+  <div id="top-bar">
+    <div id="running-total">0 / 1000</div>
+    <div id="progress"></div>
+  </div>
+  <div id="prompt" style="display:none;">
+    <div class="label">Find this location <span id="round-label"></span></div>
+    <div id="address"></div>
+  </div>
+  <div id="map"></div>
+  <div id="controls" style="display:none;">
+    <button id="submit-btn" class="btn btn-primary" disabled>Tap the map to place your guess</button>
+  </div>
+  <div id="round-result">
+    <div id="round-score"></div>
+    <div id="round-dist"></div>
+    <button id="next-btn" class="btn btn-primary">Next location</button>
+  </div>
+  <div id="final-result">
+    <div id="victory-banner">Challenge Complete</div>
+    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">Final score</div>
+    <div id="total-score"></div>
+    <div id="score-breakdown"></div>
+    <div id="share-box"></div>
+    <button id="copy-btn" class="btn btn-secondary">Copy result</button>
+  </div>
+  <div id="already" class="already-played" style="display:none;">
+    <h2>Already played today</h2>
+    <p id="prev-score"></p>
+    <p style="margin-top:12px;color:#94a3b8;font-size:0.9rem;">Come back tomorrow for a new set.</p>
+  </div>
+  <footer>Imagery (c) Esri - Mix of named places and residential addresses on West Maui</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const LOCATIONS = [
+      { name: "Puamana Beach Park", lat: 20.8586, lon: -156.6689 },
+      { name: "Lahaina Aquatic Center", lat: 20.8709, lon: -156.6751 },
+      { name: "Banyan Tree Park", lat: 20.87189, lon: -156.67766 },
+      { name: "Old Lahaina Courthouse", lat: 20.87215, lon: -156.67785 },
+      { name: "Pioneer Inn", lat: 20.87247, lon: -156.67784 },
+      { name: "Baldwin Home Museum", lat: 20.87355, lon: -156.67755 },
+      { name: "Wo Hing Museum", lat: 20.87585, lon: -156.67895 },
+      { name: "Maria Lanakila Catholic Church", lat: 20.87528, lon: -156.67667 },
+      { name: "Waiola Church", lat: 20.86985, lon: -156.67585 },
+      { name: "Lahaina Harbor", lat: 20.87157, lon: -156.67865 },
+      { name: "Hale Paahao (Old Prison)", lat: 20.8714, lon: -156.6764 },
+      { name: "Masters Reading Room", lat: 20.8738, lon: -156.6779 },
+      { name: "Jodo Mission", lat: 20.88095, lon: -156.68385 },
+      { name: "Lahaina Cannery Mall", lat: 20.88615, lon: -156.68485 },
+      { name: "Lahaina Gateway", lat: 20.88755, lon: -156.68295 },
+      { name: "Wahikuli Wayside Park", lat: 20.89485, lon: -156.68695 },
+      { name: "Whalers Village", lat: 20.92103, lon: -156.69436 },
+      { name: "Kaanapali Beach Hotel", lat: 20.91885, lon: -156.69515 },
+      { name: "The Westin Maui Resort", lat: 20.91735, lon: -156.69475 },
+      { name: "Hyatt Regency Maui", lat: 20.90895, lon: -156.69385 },
+      { name: "Sheraton Maui Resort", lat: 20.92395, lon: -156.69685 },
+      { name: "Black Rock (Puu Kekaa)", lat: 20.92485, lon: -156.69755 },
+      { name: "Kahekili Beach Park", lat: 20.93215, lon: -156.69585 },
+      { name: "Honokowai Beach Park", lat: 20.95185, lon: -156.68715 },
+      { name: "Pohaku Park (S-Turns)", lat: 20.96755, lon: -156.68115 },
+      { name: "Napili Bay", lat: 20.99425, lon: -156.66755 },
+      { name: "Napili Kai Beach Resort", lat: 20.99555, lon: -156.66825 },
+      { name: "Kapalua Bay", lat: 20.99905, lon: -156.66535 },
+      { name: "The Ritz-Carlton, Kapalua", lat: 21.00185, lon: -156.65385 },
+      { name: "DT Fleming Beach Park", lat: 21.00485, lon: -156.65125 },
+      { name: "Kapalua Plantation Course", lat: 21.00755, lon: -156.64385 },
+      { name: "Oneloa Bay (Ironwoods)", lat: 21.00215, lon: -156.65845 },
+      { name: "Lahaina Civic Center", lat: 20.88595, lon: -156.67985 },
+      { name: "King Kamehameha III Elementary", lat: 20.88015, lon: -156.67655 },
+      { name: "Mokuula historic site", lat: 20.86955, lon: -156.67605 },
+      { name: "1328 Kahoma St, Lahaina", lat: 20.8905, lon: -156.6818 },
+      { name: "1298 Kahoma St, Lahaina", lat: 20.8895, lon: -156.6820 },
+      { name: "1336 Kahoma St, Lahaina", lat: 20.8907, lon: -156.6816 },
+      { name: "1400 Kahoma St, Lahaina", lat: 20.8924, lon: -156.6812 },
+      { name: "505 Front St, Lahaina", lat: 20.8705, lon: -156.6774 },
+      { name: "844 Front St, Lahaina", lat: 20.8729, lon: -156.6782 },
+      { name: "150 Dickenson St, Lahaina", lat: 20.8740, lon: -156.6770 },
+      { name: "712 Wainee St, Lahaina", lat: 20.8753, lon: -156.6767 },
+      { name: "100 Lahainaluna Rd, Lahaina", lat: 20.8791, lon: -156.6745 },
+      { name: "400 Ainakea Rd, Lahaina", lat: 20.8845, lon: -156.6712 },
+      { name: "15 Fleming Rd, Lahaina", lat: 20.8895, lon: -156.6848 },
+      { name: "90 Wahikuli Rd, Lahaina", lat: 20.8912, lon: -156.6821 },
+      { name: "40 Kenui St, Lahaina", lat: 20.8878, lon: -156.6789 },
+      { name: "25 Limahana Cir, Lahaina", lat: 20.8852, lon: -156.6764 },
+      { name: "60 Pualei Dr, Lahaina", lat: 20.8908, lon: -156.6752 },
+      { name: "15 Kanakea Loop, Lahaina", lat: 20.8834, lon: -156.6728 },
+      { name: "20 Aulike St, Lahaina", lat: 20.8798, lon: -156.6705 },
+      { name: "55 Awaiku St, Lahaina", lat: 20.8815, lon: -156.6698 },
+      { name: "12 Hopoe St, Lahaina", lat: 20.8789, lon: -156.6732 },
+      { name: "35 Lokia St, Lahaina", lat: 20.8776, lon: -156.6741 },
+      { name: "18 Niheu St, Lahaina", lat: 20.8762, lon: -156.6748 },
+      { name: "42 Laalo St, Lahaina", lat: 20.8754, lon: -156.6755 },
+      { name: "180 Prison St, Lahaina", lat: 20.8724, lon: -156.6765 },
+      { name: "45 Baker St, Lahaina", lat: 20.8756, lon: -156.6795 },
+      { name: "120 Luakini St, Lahaina", lat: 20.8742, lon: -156.6788 }
+    ];
+
+    function seededRandom(seedStr) {
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < seedStr.length; i++) {
+        h ^= seedStr.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return function() {
+        h += 0x6D2B79F5;
+        let t = Math.imul(h ^ (h >>> 15), 1 | h);
+        t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function getTodayKey() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
+    function getTodayLocations() {
+      const key = getTodayKey();
+      const rng = seededRandom(key + '-lahainatap-v6');
+      const indices = [];
+      while (indices.length < 5) {
+        const idx = Math.floor(rng() * LOCATIONS.length);
+        if (!indices.includes(idx)) indices.push(idx);
+      }
+      return { key: key, list: indices.map(function(i) { return LOCATIONS[i]; }) };
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = function(x) { return x * Math.PI / 180; };
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2)*Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function scoreFromMeters(m) {
+      const ft = m * 3.28084;
+      if (ft <= 200) return 100;
+      if (ft <= 500) return Math.round(lerp(100, 95, (ft - 200) / 300));
+      if (ft <= 1000) return Math.round(lerp(95, 90, (ft - 500) / 500));
+      if (ft <= 2640) return Math.round(lerp(90, 70, (ft - 1000) / 1640));
+      if (ft <= 5280) return Math.round(lerp(70, 45, (ft - 2640) / 2640));
+      if (ft <= 10560) return Math.round(lerp(45, 15, (ft - 5280) / 5280));
+      if (ft <= 15840) return Math.round(lerp(15, 0, (ft - 10560) / 5280));
+      return 0;
+    }
+
+    function formatDistance(meters) {
+      const feet = meters * 3.28084;
+      if (feet < 5280) return Math.round(feet).toLocaleString() + ' feet away';
+      const miles = feet / 5280;
+      return miles.toFixed(miles < 10 ? 2 : 1) + ' miles away';
+    }
+
+    let audioCtx = null;
+    function getAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
+    function playTone(freq, duration, type, volume) {
+      type = type || 'sine';
+      volume = volume || 0.15;
+      try {
+        const ctx = getAudio();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.value = volume;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+    function playTap() { playTone(880, 0.08, 'sine', 0.12); }
+    function playSubmit() {
+      playTone(523, 0.12, 'triangle', 0.18);
+      setTimeout(function() { playTone(659, 0.15, 'triangle', 0.14); }, 80);
+    }
+    function playVictory() {
+      [523, 659, 784, 1047].forEach(function(f, i) {
+        setTimeout(function() { playTone(f, 0.28, 'sine', 0.16); }, i * 140);
+      });
+    }
+
+    let map, guessMarker, trueMarker, line;
+    let dayData = null;
+    let roundIndex = 0;
+    let guessLatLng = null;
+    let hasGuessedThisRound = false;
+    let roundScores = [];
+    let roundDists = [];
+    const STORAGE_KEY = 'lahainatap_v6';
+
+    function loadState() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+      catch (e) { return {}; }
+    }
+    function saveState(obj) { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }
+
+    function updateRunningTotal() {
+      const raw = roundScores.reduce(function(a, b) { return a + b; }, 0);
+      document.getElementById('running-total').textContent = (raw * 2) + ' / 1000';
+    }
+
+    function initMap() {
+      map = L.map('map', { center: [20.92, -156.68], zoom: 12, minZoom: 11, maxZoom: 18 });
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles (c) Esri', maxZoom: 19
+      }).addTo(map);
+      map.on('click', onMapClick);
+    }
+
+    function clearRoundMarkers() {
+      if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
+      if (trueMarker) { map.removeLayer(trueMarker); trueMarker = null; }
+      if (line) { map.removeLayer(line); line = null; }
+      guessLatLng = null;
+      hasGuessedThisRound = false;
+    }
+
+    function onMapClick(e) {
+      if (hasGuessedThisRound) return;
+      playTap();
+      guessLatLng = e.latlng;
+      if (guessMarker) {
+        guessMarker.setLatLng(e.latlng);
+      } else {
+        guessMarker = L.marker(e.latlng, {
+          icon: L.divIcon({
+            className: '',
+            html: '<div style="background:#0ea5e9;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+          })
+        }).addTo(map);
+      }
+      document.getElementById('submit-btn').disabled = false;
+      document.getElementById('submit-btn').textContent = 'Submit guess';
+    }
+
+    function updateProgressDots() {
+      const el = document.getElementById('progress');
+      el.innerHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        if (i < roundIndex) d.classList.add('done');
+        if (i === roundIndex) d.classList.add('current');
+        el.appendChild(d);
+      }
+    }
+
+    function showCurrentLocation() {
+      clearRoundMarkers();
+      const current = dayData.list[roundIndex];
+      document.getElementById('address').textContent = current.name;
+      document.getElementById('round-label').textContent = '(' + (roundIndex + 1) + ' of 5)';
+      document.getElementById('prompt').style.display = 'block';
+      document.getElementById('controls').style.display = 'block';
+      document.getElementById('round-result').classList.remove('show');
+      document.getElementById('final-result').classList.remove('show');
+      document.getElementById('submit-btn').disabled = true;
+      document.getElementById('submit-btn').textContent = 'Tap the map to place your guess';
+      updateProgressDots();
+      updateRunningTotal();
+      map.setView([20.93, -156.68], 12);
+    }
+
+    function submitGuess() {
+      if (!guessLatLng || hasGuessedThisRound) return;
+      hasGuessedThisRound = true;
+      playSubmit();
+      const current = dayData.list[roundIndex];
+      const dist = haversine(guessLatLng.lat, guessLatLng.lng, current.lat, current.lon);
+      const score = scoreFromMeters(dist);
+      roundScores.push(score);
+      roundDists.push(Math.round(dist));
+      updateRunningTotal();
+
+      trueMarker = L.marker([current.lat, current.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="background:#22c55e;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        })
+      }).addTo(map);
+
+      line = L.polyline([[guessLatLng.lat, guessLatLng.lng], [current.lat, current.lon]], {
+        color: '#fbbf24', weight: 3, dashArray: '6 6'
+      }).addTo(map);
+
+      map.fitBounds(L.latLngBounds([guessLatLng, [current.lat, current.lon]]).pad(0.4));
+
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('round-result').classList.add('show');
+      document.getElementById('round-score').textContent = score + ' / 100';
+      document.getElementById('round-dist').textContent = formatDistance(dist);
+      document.getElementById('next-btn').textContent = roundIndex === 4 ? 'See final score' : 'Next location';
+    }
+
+    function nextRound() {
+      roundIndex++;
+      if (roundIndex >= 5) finishGame();
+      else showCurrentLocation();
+    }
+
+    function spawnParticles() {
+      const container = document.getElementById('final-result');
+      const colors = ['#38bdf8', '#22c55e', '#fbbf24', '#f472b6', '#a78bfa'];
+      for (let i = 0; i < 28; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = (10 + Math.random() * 80) + '%';
+        p.style.top = (5 + Math.random() * 20) + '%';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.animationDelay = (Math.random() * 0.4) + 's';
+        container.appendChild(p);
+        setTimeout(function() { p.remove(); }, 1800);
+      }
+    }
+
+    function finishGame() {
+      const raw = roundScores.reduce(function(a, b) { return a + b; }, 0);
+      const finalScore = raw * 2;
+      document.getElementById('prompt').style.display = 'none';
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('round-result').classList.remove('show');
+      document.getElementById('top-bar').classList.remove('show');
+      document.getElementById('final-result').classList.add('show');
+      document.getElementById('total-score').textContent = finalScore + ' / 1000';
+      document.getElementById('score-breakdown').textContent =
+        roundScores.map(function(s, i) { return '#' + (i+1) + ': ' + s; }).join('  |  ');
+
+      const tag = finalScore >= 900 ? '[great]' : finalScore >= 750 ? '[solid]' : finalScore >= 550 ? '[ok]' : '[try again]';
+      document.getElementById('share-box').textContent =
+        'LahainaTap ' + dayData.key + '\n' +
+        roundScores.join(' ') + ' ' + tag + '\n' +
+        'Final: ' + finalScore + '/1000';
+
+      playVictory();
+      setTimeout(function() {
+        document.getElementById('victory-banner').classList.add('show');
+        document.getElementById('total-score').style.transform = 'scale(1.08)';
+        setTimeout(function() { document.getElementById('total-score').style.transform = 'scale(1)'; }, 400);
+        spawnParticles();
+      }, 200);
+
+      const state = loadState();
+      state[dayData.key] = { total: finalScore, scores: roundScores, dists: roundDists };
+      saveState(state);
+    }
+
+    function showAlreadyPlayed(prev) {
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('prompt').style.display = 'none';
+      document.getElementById('map').style.display = 'none';
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('top-bar').style.display = 'none';
+      document.getElementById('already').style.display = 'block';
+      document.getElementById('prev-score').innerHTML =
+        'You scored <strong style="color:#38bdf8">' + prev.total + '</strong> / 1000<br>' +
+        '<span style="color:#94a3b8;font-size:0.9rem">' + prev.scores.join(' | ') + '</span>';
+    }
+
+    function startGame() {
+      dayData = getTodayLocations();
+      const state = loadState();
+      if (state[dayData.key]) {
+        showAlreadyPlayed(state[dayData.key]);
+        return;
+      }
+      document.getElementById('status').textContent = 'Today - ' + dayData.key + ' - 5 locations';
+      document.getElementById('top-bar').classList.add('show');
+      initMap();
+      showCurrentLocation();
+    }
+
+    document.getElementById('submit-btn').addEventListener('click', submitGuess);
+    document.getElementById('next-btn').addEventListener('click', nextRound);
+    document.getElementById('copy-btn').addEventListener('click', function() {
+      navigator.clipboard.writeText(document.getElementById('share-box').textContent).then(function() {
+        document.getElementById('copy-btn').textContent = 'Copied!';
+        setTimeout(function() { document.getElementById('copy-btn').textContent = 'Copy result'; }, 1500);
+      });
+    });
+    document.body.addEventListener('click', function() { getAudio(); }, { once: true });
+    startGame();
+  </script>
+</body>
+</html>
