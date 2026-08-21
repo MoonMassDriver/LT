@@ -173,71 +173,93 @@
     <p id="prev-score"></p>
     <p style="margin-top:12px;color:#94a3b8;font-size:0.9rem;">Come back tomorrow for a new set.</p>
   </div>
-  <footer>Imagery (c) Esri - Mix of named places and residential addresses on West Maui</footer>
+  <footer>Imagery (c) Esri - Named places and major streets only (high-confidence pins)</footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // High-confidence named places only (parks, beaches, landmarks, major resorts).
+    // Coords from GNIS, Wikipedia, Maui County, USGS topo, property records.
+    // No residential house numbers. A few major streets use a verified midpoint.
     const LOCATIONS = [
-      { name: "Puamana Beach Park", lat: 20.8586, lon: -156.6689 },
-      { name: "Lahaina Aquatic Center", lat: 20.8709, lon: -156.6751 },
-      { name: "Banyan Tree Park", lat: 20.87189, lon: -156.67766 },
-      { name: "Old Lahaina Courthouse", lat: 20.87215, lon: -156.67785 },
-      { name: "Pioneer Inn", lat: 20.87247, lon: -156.67784 },
-      { name: "Baldwin Home Museum", lat: 20.87355, lon: -156.67755 },
-      { name: "Wo Hing Museum", lat: 20.87585, lon: -156.67895 },
-      { name: "Maria Lanakila Catholic Church", lat: 20.87528, lon: -156.67667 },
-      { name: "Waiola Church", lat: 20.86985, lon: -156.67585 },
-      { name: "Lahaina Harbor", lat: 20.87157, lon: -156.67865 },
-      { name: "Hale Paahao (Old Prison)", lat: 20.8714, lon: -156.6764 },
-      { name: "Masters Reading Room", lat: 20.8738, lon: -156.6779 },
-      { name: "Jodo Mission", lat: 20.88095, lon: -156.68385 },
-      { name: "Lahaina Cannery Mall", lat: 20.88615, lon: -156.68485 },
-      { name: "Lahaina Gateway", lat: 20.88755, lon: -156.68295 },
-      { name: "Wahikuli Wayside Park", lat: 20.89485, lon: -156.68695 },
-      { name: "Whalers Village", lat: 20.92103, lon: -156.69436 },
-      { name: "Kaanapali Beach Hotel", lat: 20.91885, lon: -156.69515 },
-      { name: "The Westin Maui Resort", lat: 20.91735, lon: -156.69475 },
-      { name: "Hyatt Regency Maui", lat: 20.90895, lon: -156.69385 },
-      { name: "Sheraton Maui Resort", lat: 20.92395, lon: -156.69685 },
-      { name: "Black Rock (Puu Kekaa)", lat: 20.92485, lon: -156.69755 },
-      { name: "Kahekili Beach Park", lat: 20.93215, lon: -156.69585 },
-      { name: "Honokowai Beach Park", lat: 20.95185, lon: -156.68715 },
-      { name: "Pohaku Park (S-Turns)", lat: 20.96755, lon: -156.68115 },
-      { name: "Napili Bay", lat: 20.99425, lon: -156.66755 },
-      { name: "Napili Kai Beach Resort", lat: 20.99555, lon: -156.66825 },
-      { name: "Kapalua Bay", lat: 20.99905, lon: -156.66535 },
-      { name: "The Ritz-Carlton, Kapalua", lat: 21.00185, lon: -156.65385 },
-      { name: "DT Fleming Beach Park", lat: 21.00485, lon: -156.65125 },
-      { name: "Kapalua Plantation Course", lat: 21.00755, lon: -156.64385 },
-      { name: "Oneloa Bay (Ironwoods)", lat: 21.00215, lon: -156.65845 },
-      { name: "Lahaina Civic Center", lat: 20.88595, lon: -156.67985 },
-      { name: "King Kamehameha III Elementary", lat: 20.88015, lon: -156.67655 },
-      { name: "Mokuula historic site", lat: 20.86955, lon: -156.67605 },
-      { name: "1328 Kahoma St, Lahaina", lat: 20.8905, lon: -156.6818 },
-      { name: "1298 Kahoma St, Lahaina", lat: 20.8895, lon: -156.6820 },
-      { name: "1336 Kahoma St, Lahaina", lat: 20.8907, lon: -156.6816 },
-      { name: "1400 Kahoma St, Lahaina", lat: 20.8924, lon: -156.6812 },
-      { name: "505 Front St, Lahaina", lat: 20.8705, lon: -156.6774 },
-      { name: "844 Front St, Lahaina", lat: 20.8729, lon: -156.6782 },
-      { name: "150 Dickenson St, Lahaina", lat: 20.8740, lon: -156.6770 },
-      { name: "712 Wainee St, Lahaina", lat: 20.8753, lon: -156.6767 },
-      { name: "100 Lahainaluna Rd, Lahaina", lat: 20.8791, lon: -156.6745 },
-      { name: "400 Ainakea Rd, Lahaina", lat: 20.8845, lon: -156.6712 },
-      { name: "15 Fleming Rd, Lahaina", lat: 20.8895, lon: -156.6848 },
-      { name: "90 Wahikuli Rd, Lahaina", lat: 20.8912, lon: -156.6821 },
-      { name: "40 Kenui St, Lahaina", lat: 20.8878, lon: -156.6789 },
-      { name: "25 Limahana Cir, Lahaina", lat: 20.8852, lon: -156.6764 },
-      { name: "60 Pualei Dr, Lahaina", lat: 20.8908, lon: -156.6752 },
-      { name: "15 Kanakea Loop, Lahaina", lat: 20.8834, lon: -156.6728 },
-      { name: "20 Aulike St, Lahaina", lat: 20.8798, lon: -156.6705 },
-      { name: "55 Awaiku St, Lahaina", lat: 20.8815, lon: -156.6698 },
-      { name: "12 Hopoe St, Lahaina", lat: 20.8789, lon: -156.6732 },
-      { name: "35 Lokia St, Lahaina", lat: 20.8776, lon: -156.6741 },
-      { name: "18 Niheu St, Lahaina", lat: 20.8762, lon: -156.6748 },
-      { name: "42 Laalo St, Lahaina", lat: 20.8754, lon: -156.6755 },
-      { name: "180 Prison St, Lahaina", lat: 20.8724, lon: -156.6765 },
-      { name: "45 Baker St, Lahaina", lat: 20.8756, lon: -156.6795 },
-      { name: "120 Luakini St, Lahaina", lat: 20.8742, lon: -156.6788 }
+      { name: "Puamana Beach Park", lat: 20.8575, lon: -156.6661 },
+      { name: "Launiupoko Beach Park", lat: 20.8439, lon: -156.6542 },
+      { name: "Banyan Tree Park", lat: 20.8717, lon: -156.6775 },
+      { name: "Old Lahaina Courthouse", lat: 20.8722, lon: -156.6778 },
+      { name: "Pioneer Inn", lat: 20.8725, lon: -156.6778 },
+      { name: "Baldwin Home Museum", lat: 20.8761, lon: -156.6806 },
+      { name: "Wo Hing Museum", lat: 20.8797, lon: -156.6836 },
+      { name: "Maria Lanakila Catholic Church", lat: 20.8753, lon: -156.6767 },
+      { name: "Waiola Church", lat: 20.8699, lon: -156.6759 },
+      { name: "Lahaina Harbor", lat: 20.8708, lon: -156.6783 },
+      { name: "Hale Paahao (Old Prison)", lat: 20.8750, lon: -156.6775 },
+      { name: "Jodo Mission", lat: 20.8810, lon: -156.6839 },
+      { name: "Lahaina Cannery Mall", lat: 20.8897, lon: -156.6872 },
+      { name: "Wahikuli Wayside Park", lat: 20.8949, lon: -156.6870 },
+      { name: "Lahaina Civic Center", lat: 20.9050, lon: -156.6839 },
+      { name: "King Kamehameha III Elementary", lat: 20.8802, lon: -156.6766 },
+      { name: "Lahainaluna High School", lat: 20.8928, lon: -156.6617 },
+      { name: "Whalers Village", lat: 20.9210, lon: -156.6944 },
+      { name: "Kaanapali Beach Hotel", lat: 20.9189, lon: -156.6952 },
+      { name: "The Westin Maui Resort", lat: 20.9174, lon: -156.6948 },
+      { name: "Hyatt Regency Maui", lat: 20.9090, lon: -156.6939 },
+      { name: "Sheraton Maui Resort", lat: 20.9240, lon: -156.6969 },
+      { name: "Black Rock (Puu Kekaa)", lat: 20.9266, lon: -156.6968 },
+      { name: "Kahekili Beach Park", lat: 20.9322, lon: -156.6959 },
+      { name: "Honokowai Beach Park", lat: 20.9578, lon: -156.6894 },
+      { name: "Pohaku Park (S-Turns)", lat: 20.9678, lon: -156.6812 },
+      { name: "Napili Bay", lat: 20.9943, lon: -156.6676 },
+      { name: "Napili Kai Beach Resort", lat: 20.9956, lon: -156.6683 },
+      { name: "Kapalua Bay", lat: 20.9995, lon: -156.6667 },
+      { name: "The Ritz-Carlton, Kapalua", lat: 21.0019, lon: -156.6539 },
+      { name: "DT Fleming Beach Park", lat: 21.0049, lon: -156.6513 },
+      { name: "Oneloa Bay (Ironwoods)", lat: 21.0022, lon: -156.6585 },
+      { name: "Mokuula historic site", lat: 20.8696, lon: -156.6761 },
+      { name: "Front Street (near Banyan)", lat: 20.8720, lon: -156.6780 },
+      { name: "Kahoma Street", lat: 20.8905, lon: -156.6818 },
+      { name: "Lahainaluna Road", lat: 20.8781, lon: -156.6757 },
+      { name: "Lahaina Gateway", lat: 20.8866, lon: -156.6823 },
+      { name: "Lahaina Square Shopping Center", lat: 20.8811, lon: -156.6814 },
+      { name: "Royal Lahaina Resort", lat: 20.9318, lon: -156.6923 },
+      { name: "Old Lahaina Luau", lat: 20.8860, lon: -156.6852 },
+      { name: "Hanakaoo Beach Park (Canoe Beach)", lat: 20.9136, lon: -156.6925 },
+      { name: "Kamehameha Iki Park", lat: 20.8687, lon: -156.6762 },
+      { name: "Lahaina Aquatic Center", lat: 20.8696, lon: -156.6715 },
+      { name: "Honolua Bay", lat: 21.0131, lon: -156.6383 },
+      { name: "Slaughterhouse Beach (Mokuleia)", lat: 21.0111, lon: -156.6422 },
+      { name: "Kapalua Airport (JHM)", lat: 20.9626, lon: -156.6742 },
+      { name: "Mala Wharf", lat: 20.8894, lon: -156.6914 },
+      { name: "Marriott Maui Ocean Club", lat: 20.9165, lon: -156.6945 },
+      { name: "Honua Kai Resort", lat: 20.9365, lon: -156.6928 },
+      { name: "The Whaler on Kaanapali Beach", lat: 20.9226, lon: -156.6945 },
+      { name: "Kaanapali Golf Courses", lat: 20.9292, lon: -156.6933 },
+      { name: "Fairway Shops at Kaanapali", lat: 20.9245, lon: -156.6895 },
+      { name: "West Maui Shopping Center", lat: 20.8828, lon: -156.6814 },
+      { name: "Holy Innocents Episcopal Church", lat: 20.8728, lon: -156.6792 },
+      { name: "Hongwanji Mission", lat: 20.8736, lon: -156.6767 },
+      { name: "Hauola Stone", lat: 20.8758, lon: -156.6817 },
+      { name: "Lahaina Armory Park", lat: 20.8717, lon: -156.6792 },
+      { name: "Lahaina Post Office (downtown)", lat: 20.8772, lon: -156.6805 },
+      { name: "Safeway Lahaina", lat: 20.8865, lon: -156.6845 },
+      { name: "Foodland Honokowai", lat: 20.9560, lon: -156.6865 },
+      { name: "Princess Nahienaena Elementary", lat: 20.8845, lon: -156.6780 },
+      { name: "Lahaina Intermediate School", lat: 20.8820, lon: -156.6760 },
+      { name: "Feast at Lele", lat: 20.8685, lon: -156.6770 },
+      { name: "Lahaina Shores Beach Resort", lat: 20.8680, lon: -156.6775 },
+      { name: "Baby Beach (Puunoa)", lat: 20.8825, lon: -156.6865 },
+      { name: "Kapalua Plantation Course", lat: 21.0076, lon: -156.6439 },
+      { name: "Kapalua Bay Course", lat: 20.9985, lon: -156.6620 },
+      { name: "The Montage Kapalua Bay", lat: 21.0002, lon: -156.6658 },
+      { name: "Kahana Gateway Shopping Center", lat: 20.9755, lon: -156.6785 },
+      { name: "Napili Plaza", lat: 20.9905, lon: -156.6660 },
+      { name: "Honokowai Marketplace", lat: 20.9550, lon: -156.6870 },
+      { name: "Kaanapali Beach Walk (mid)", lat: 20.9200, lon: -156.6955 },
+      { name: "Dickenson Square", lat: 20.8772, lon: -156.6794 },
+      { name: "Prison Street (near Hale Paahao)", lat: 20.8724, lon: -156.6765 },
+      { name: "Kelawea Mauka III Park", lat: 20.8867, lon: -156.6706 },
+      { name: "Maui Eldorado Kaanapali", lat: 20.9218, lon: -156.6915 },
+      { name: "Outrigger Kaanapali Beach Resort", lat: 20.9195, lon: -156.6940 },
+      { name: "Westin Kaanapali Ocean Resort Villas", lat: 20.9335, lon: -156.6935 },
+      { name: "Aston Kaanapali Shores", lat: 20.9405, lon: -156.6915 }
     ];
 
     function seededRandom(seedStr) {
@@ -264,7 +286,7 @@
 
     function getTodayLocations() {
       const key = getTodayKey();
-      const rng = seededRandom(key + '-lahainatap-v6');
+      const rng = seededRandom(key + '-lahainatap-v10');
       const indices = [];
       while (indices.length < 5) {
         const idx = Math.floor(rng() * LOCATIONS.length);
@@ -288,13 +310,12 @@
 
     function scoreFromMeters(m) {
       const ft = m * 3.28084;
-      if (ft <= 200) return 100;
-      if (ft <= 500) return Math.round(lerp(100, 95, (ft - 200) / 300));
-      if (ft <= 1000) return Math.round(lerp(95, 90, (ft - 500) / 500));
-      if (ft <= 2640) return Math.round(lerp(90, 70, (ft - 1000) / 1640));
-      if (ft <= 5280) return Math.round(lerp(70, 45, (ft - 2640) / 2640));
-      if (ft <= 10560) return Math.round(lerp(45, 15, (ft - 5280) / 5280));
-      if (ft <= 15840) return Math.round(lerp(15, 0, (ft - 10560) / 5280));
+      if (ft <= 500) return 100;
+      if (ft <= 1000) return Math.round(lerp(100, 95, (ft - 500) / 500));
+      if (ft <= 2000) return Math.round(lerp(95, 90, (ft - 1000) / 1000));
+      if (ft <= 5280) return Math.round(lerp(90, 65, (ft - 2000) / 3280));
+      if (ft <= 10560) return Math.round(lerp(65, 30, (ft - 5280) / 5280));
+      if (ft <= 15840) return Math.round(lerp(30, 0, (ft - 10560) / 5280));
       return 0;
     }
 
@@ -345,7 +366,7 @@
     let hasGuessedThisRound = false;
     let roundScores = [];
     let roundDists = [];
-    const STORAGE_KEY = 'lahainatap_v6';
+    const STORAGE_KEY = 'lahainatap_v10';
 
     function loadState() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
