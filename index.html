@@ -511,9 +511,10 @@
 
       const tag = finalScore >= 900 ? '[great]' : finalScore >= 750 ? '[solid]' : finalScore >= 550 ? '[ok]' : '[try again]';
       document.getElementById('share-box').textContent =
-        'LahainaTap ' + dayData.key + '\n' +
-        roundScores.join(' ') + ' ' + tag + '\n' +
-        'Final: ' + finalScore + '/1000';
+  'LahainaTap ' + dayData.key + '\n' +
+  roundScores.join(' ') + ' ' + tag + '\n' +
+  'Final: ' + finalScore + '/1000\n' +
+  'https://moonmassdriver.github.io/LahainaTap/';
 
       playVictory();
       setTimeout(function() {
