@@ -22,6 +22,28 @@
     }
     header h1 { font-size: 1.25rem; font-weight: 700; color: #38bdf8; letter-spacing: -0.02em; }
     header p { font-size: 0.75rem; color: #94a3b8; margin-top: 1px; }
+    #info-btn {
+      position: absolute; top: 10px; right: 12px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid #475569; background: #334155; color: #e2e8f0;
+      font-size: 0.95rem; font-weight: 700; font-style: italic; cursor: pointer;
+      line-height: 1; z-index: 6;
+    }
+    #credits-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 80;
+    }
+    #credits-backdrop.show { display: block; }
+    #credits-modal {
+      display: none; position: fixed; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 380px); z-index: 81;
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      padding: 18px 16px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    }
+    #credits-modal.show { display: block; }
+    #credits-modal h2 { font-size: 1rem; color: #38bdf8; margin-bottom: 10px; }
+    #credits-modal p { font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; text-align: left; }
     #top-bar {
       display: none; background: #1e293b; padding: 8px 16px;
       border-bottom: 1px solid #334155; align-items: center; justify-content: space-between;
@@ -117,7 +139,14 @@
   <header>
     <h1>LahainaTap</h1>
     <p>West Maui daily challenge</p>
+    <button id="info-btn" type="button" aria-label="Credits">i</button>
   </header>
+  <div id="credits-backdrop"></div>
+  <div id="credits-modal">
+    <h2>About</h2>
+    <p>This game was created by Kyle Hunt (a Lahaina native) with help from xAI’s Grok for the coding. It was inspired by the game Maptap. Special thanks to Kerek Franz and Chris Brown of Lahaina who helped make it more accurate.</p>
+    <button id="credits-close" class="btn btn-secondary" style="margin-top:14px;">Close</button>
+  </div>
 
   <div id="status">Loading today’s challenge…</div>
   <div id="top-bar">
@@ -874,6 +903,15 @@
     document.getElementById('next-btn').onclick = nextLocation;
     document.getElementById('copy-btn').onclick = function() { copyShare(this); };
     document.getElementById('locked-copy').onclick = function() { copyShare(this); };
+    (function() {
+      const modal = document.getElementById('credits-modal');
+      const back = document.getElementById('credits-backdrop');
+      function openCredits() { modal.classList.add('show'); back.classList.add('show'); }
+      function closeCredits() { modal.classList.remove('show'); back.classList.remove('show'); }
+      document.getElementById('info-btn').onclick = openCredits;
+      document.getElementById('credits-close').onclick = closeCredits;
+      back.onclick = closeCredits;
+    })();
     document.body.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
     document.body.addEventListener('click', unlockAudio, { once: true });
 
