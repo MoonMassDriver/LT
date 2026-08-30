@@ -2,124 +2,106 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>LahainaTap - West Maui Daily Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LahainaTap</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh; height: 100%; display: flex; flex-direction: column;
       overscroll-behavior: none;
     }
+    body.endgame footer, body.endgame #status { display: none; }
+    body.endgame #map { flex: 0 0 28vh; min-height: 150px; max-height: 28vh; }
     header {
-      background: #1e293b;
-      padding: 10px 16px 8px;
-      text-align: center;
-      border-bottom: 1px solid #334155;
+      background: #1e293b; padding: 10px 16px 8px; text-align: center;
+      border-bottom: 1px solid #334155; position: relative; z-index: 5;
     }
-    header h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #38bdf8;
-      letter-spacing: -0.02em;
-    }
-    header p {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      margin-top: 1px;
-    }
+    header h1 { font-size: 1.25rem; font-weight: 700; color: #38bdf8; letter-spacing: -0.02em; }
+    header p { font-size: 0.75rem; color: #94a3b8; margin-top: 1px; }
     #top-bar {
-      display: none;
-      background: #1e293b;
-      padding: 8px 16px;
-      border-bottom: 1px solid #334155;
-      align-items: center;
-      justify-content: space-between;
+      display: none; background: #1e293b; padding: 8px 16px;
+      border-bottom: 1px solid #334155; align-items: center; justify-content: space-between;
     }
     #top-bar.show { display: flex; }
-    #running-total {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #38bdf8;
-    }
+    #running-total { font-size: 1.05rem; font-weight: 700; color: #38bdf8; }
     #progress { display: flex; gap: 5px; }
-    .dot {
-      width: 9px; height: 9px; border-radius: 50%; background: #334155;
-    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #334155; }
     .dot.done { background: #22c55e; }
     .dot.current { background: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.35); }
     #prompt {
-      background: #1e293b;
-      padding: 10px 16px 12px;
-      text-align: center;
+      display: none; background: #1e293b; padding: 10px 16px 12px; text-align: center;
       border-bottom: 1px solid #334155;
     }
-    #prompt .label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-      margin-bottom: 3px;
-    }
-    #address {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: #f8fafc;
-      line-height: 1.35;
-    }
-    #map { flex: 1; min-height: 300px; width: 100%; background: #0f172a; }
+    #prompt .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 3px; }
+    #address { font-size: 1.05rem; font-weight: 600; color: #f8fafc; line-height: 1.35; }
+    #map { flex: 1; min-height: 260px; width: 100%; background: #0f172a; }
     #controls {
-      background: #1e293b;
-      padding: 16px 16px calc(56px + env(safe-area-inset-bottom, 0px));
+      display: none; background: #1e293b;
+      padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px));
       border-top: 1px solid #334155;
     }
     .btn {
-      display: block; width: 100%; padding: 13px; border: none; border-radius: 10px;
-      font-size: 1rem; font-weight: 600; cursor: pointer;
+      display: block; width: 100%; padding: 14px; border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 650; cursor: pointer;
     }
     .btn-primary { background: #0ea5e9; color: #0f172a; }
     .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
     .btn-secondary { background: #334155; color: #e2e8f0; margin-top: 8px; }
     #round-result {
-      display: none;
-      background: #1e293b;
-      padding: 16px 16px calc(56px + env(safe-area-inset-bottom, 0px));
-      border-top: 1px solid #334155;
-      text-align: center;
+      display: none; background: #1e293b;
+      padding: 16px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155; text-align: center;
     }
-    #round-result.show { display: block; }
-    #round-score { font-size: 1.7rem; font-weight: 800; color: #38bdf8; }
-    #round-dist { font-size: 0.9rem; color: #94a3b8; margin: 4px 0 12px; }
-    #final-result {
-      display: none;
-      background: #1e293b;
-      padding: 20px 16px 36px;
-      border-top: 1px solid #334155;
-      text-align: center;
+    #final-result, #locked {
+      display: none; background: #1e293b;
+      padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155; text-align: center;
+      flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
       position: relative;
-      overflow: hidden;
     }
-    #final-result.show { display: block; }
-    #total-score {
-      font-size: 2.6rem; font-weight: 800; color: #38bdf8; line-height: 1;
-      transition: transform 0.4s ease;
+    #round-result.show, #final-result.show, #locked.show { display: block; }
+    #round-score { font-size: 1.7rem; font-weight: 800; color: #38bdf8; }
+    #round-dist { font-size: 0.9rem; color: #94a3b8; margin: 4px 0 8px; }
+    #round-facts {
+      display: none; text-align: left; background: #0f172a; border: 1px solid #334155;
+      border-radius: 10px; padding: 10px 12px; margin: 0 0 12px;
+      font-size: 0.82rem; line-height: 1.45; color: #cbd5e1;
     }
-    #score-breakdown { font-size: 0.9rem; color: #94a3b8; margin: 8px 0 14px; }
-    #share-box {
+    #round-facts .tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #7dd3fc; margin-bottom: 4px; }
+    #total-score, #locked-score { font-size: 1.85rem; font-weight: 800; color: #38bdf8; line-height: 1; }
+    #score-breakdown { font-size: 0.85rem; color: #94a3b8; margin: 4px 0 8px; }
+    #recap-list, #locked-list {
+      text-align: left; background: #0f172a; border: 1px solid #334155;
+      border-radius: 10px; padding: 8px 10px; margin: 12px 0 8px;
+    }
+    .recap-row {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 0.82rem;
+    }
+    .recap-row:last-child { border-bottom: none; }
+    .recap-num { color: #7dd3fc; font-weight: 700; width: 14px; flex-shrink: 0; }
+    .recap-name { flex: 1; color: #e2e8f0; min-width: 0; }
+    .recap-meta { text-align: right; flex-shrink: 0; }
+    .recap-pts { color: #38bdf8; font-weight: 700; white-space: nowrap; display: block; }
+    .recap-dist { color: #94a3b8; font-size: 0.7rem; white-space: nowrap; }
+    #share-box, #locked-share {
       background: #0f172a; border: 1px solid #334155; border-radius: 8px;
       padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-word;
-      margin-bottom: 10px; text-align: left;
+      font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; margin-bottom: 10px; text-align: left; line-height: 1.45;
     }
+    #share-box a, #locked-share a { color: #7dd3fc; }
     #status { text-align: center; padding: 8px 16px; font-size: 0.85rem; color: #94a3b8; background: #0f172a; }
-    .already-played { background: #1e293b; padding: 28px 16px; text-align: center; }
-    .already-played h2 { color: #fbbf24; margin-bottom: 8px; }
     footer { text-align: center; padding: 8px; font-size: 0.65rem; color: #64748b; background: #0f172a; }
+    #victory-banner {
+      font-size: 1rem; font-weight: 700; color: #fbbf24; margin-bottom: 4px;
+      opacity: 0; transform: scale(0.7);
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #victory-banner.show { opacity: 1; transform: scale(1); }
     .particle {
       position: absolute; width: 8px; height: 8px; border-radius: 2px;
       pointer-events: none; opacity: 0.9; animation: fall 1.6s ease-out forwards;
@@ -128,171 +110,310 @@
       0% { transform: translateY(0) rotate(0deg); opacity: 1; }
       100% { transform: translateY(180px) rotate(240deg); opacity: 0; }
     }
-    #victory-banner {
-      font-size: 1.1rem; font-weight: 700; color: #fbbf24; margin-bottom: 6px;
-      opacity: 0; transform: scale(0.7);
-      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    #victory-banner.show { opacity: 1; transform: scale(1); }
+    .leaflet-control-attribution { font-size: 9px !important; }
   </style>
 </head>
 <body>
   <header>
     <h1>LahainaTap</h1>
-    <p>West Maui - Puamana to Kapalua</p>
+    <p>West Maui daily challenge</p>
   </header>
 
-  <div id="status">Loading today's puzzle...</div>
+  <div id="status">Loading today’s challenge…</div>
   <div id="top-bar">
     <div id="running-total">0 / 1000</div>
     <div id="progress"></div>
   </div>
-  <div id="prompt" style="display:none;">
+  <div id="prompt">
     <div class="label">Find this location <span id="round-label"></span></div>
     <div id="address"></div>
   </div>
   <div id="map"></div>
-  <div id="controls" style="display:none;">
+  <div id="controls">
     <button id="submit-btn" class="btn btn-primary" disabled>Tap the map to place your guess</button>
   </div>
   <div id="round-result">
     <div id="round-score"></div>
     <div id="round-dist"></div>
-    <button id="next-btn" class="btn btn-primary">Next location</button>
+    <div id="round-facts"><div class="tag">About this place</div><div id="round-facts-text"></div></div>
+    <button id="next-btn" class="btn btn-primary">Next</button>
   </div>
   <div id="final-result">
-    <div id="victory-banner">Challenge Complete</div>
+    <div id="victory-banner">Challenge complete</div>
     <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">Final score</div>
     <div id="total-score"></div>
     <div id="score-breakdown"></div>
     <div id="share-box"></div>
     <button id="copy-btn" class="btn btn-secondary">Copy result</button>
+    <div id="recap-list"></div>
   </div>
-  <div id="already" class="already-played" style="display:none;">
-    <h2>Already played today</h2>
-    <p id="prev-score"></p>
-    <p style="margin-top:12px;color:#94a3b8;font-size:0.9rem;">Come back tomorrow for a new set.</p>
+  <div id="locked">
+    <div id="locked-banner" style="font-size:1.05rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">Already played today</div>
+    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">Today’s score</div>
+    <div id="locked-score" style="font-size:2.4rem;font-weight:800;color:#38bdf8;line-height:1;"></div>
+    <div id="locked-break" style="font-size:0.9rem;color:#94a3b8;margin:8px 0 10px;"></div>
+    <div id="locked-share"></div>
+    <button id="locked-copy" class="btn btn-secondary">Copy result</button>
+    <div id="locked-list"></div>
+    <p style="font-size:0.78rem;color:#94a3b8;margin-top:12px;">Come back tomorrow for a new set of five.</p>
   </div>
-  <footer>Imagery (c) Esri - Named places and major streets only (high-confidence pins)</footer>
+  <footer>Satellite map · no labels · same five for everyone today</footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // High-confidence named places only (parks, beaches, landmarks, major resorts).
-    // Coords from GNIS, Wikipedia, Maui County, USGS topo, property records.
-    // No residential house numbers. A few major streets use a verified midpoint.
+    const SHARE_URL = 'https://bit.ly/4wYYtN9';
+    const STORAGE_KEY = 'lahainatap_daily_v3';
     const LOCATIONS = [
-      { name: "Puamana Beach Park", lat: 20.8575, lon: -156.6661 },
-      { name: "Launiupoko Beach Park", lat: 20.8439, lon: -156.6542 },
-      { name: "Banyan Tree Park", lat: 20.8717, lon: -156.6775 },
-      { name: "Old Lahaina Courthouse", lat: 20.8722, lon: -156.6778 },
-      { name: "Pioneer Inn", lat: 20.8725, lon: -156.6778 },
-      { name: "Baldwin Home Museum", lat: 20.8761, lon: -156.6806 },
-      { name: "Wo Hing Museum", lat: 20.8797, lon: -156.6836 },
-      { name: "Maria Lanakila Catholic Church", lat: 20.8753, lon: -156.6767 },
-      { name: "Waiola Church", lat: 20.8699, lon: -156.6759 },
-      { name: "Lahaina Harbor", lat: 20.8708, lon: -156.6783 },
-      { name: "Hale Paahao (Old Prison)", lat: 20.8750, lon: -156.6775 },
-      { name: "Jodo Mission", lat: 20.8810, lon: -156.6839 },
-      { name: "Lahaina Cannery Mall", lat: 20.8897, lon: -156.6872 },
-      { name: "Wahikuli Wayside Park", lat: 20.8949, lon: -156.6870 },
-      { name: "Lahaina Civic Center", lat: 20.9050, lon: -156.6839 },
-      { name: "King Kamehameha III Elementary", lat: 20.8802, lon: -156.6766 },
-      { name: "Lahainaluna High School", lat: 20.8928, lon: -156.6617 },
-      { name: "Whalers Village", lat: 20.9210, lon: -156.6944 },
-      { name: "Kaanapali Beach Hotel", lat: 20.9189, lon: -156.6952 },
-      { name: "The Westin Maui Resort", lat: 20.9174, lon: -156.6948 },
-      { name: "Hyatt Regency Maui", lat: 20.9090, lon: -156.6939 },
-      { name: "Sheraton Maui Resort", lat: 20.9240, lon: -156.6969 },
-      { name: "Black Rock (Puu Kekaa)", lat: 20.9266, lon: -156.6968 },
-      { name: "Kahekili Beach Park", lat: 20.9322, lon: -156.6959 },
-      { name: "Honokowai Beach Park", lat: 20.9578, lon: -156.6894 },
-      { name: "Pohaku Park (S-Turns)", lat: 20.9678, lon: -156.6812 },
-      { name: "Napili Bay", lat: 20.9943, lon: -156.6676 },
-      { name: "Napili Kai Beach Resort", lat: 20.9956, lon: -156.6683 },
-      { name: "Kapalua Bay", lat: 20.9995, lon: -156.6667 },
-      { name: "The Ritz-Carlton, Kapalua", lat: 21.0019, lon: -156.6539 },
-      { name: "DT Fleming Beach Park", lat: 21.0049, lon: -156.6513 },
-      { name: "Oneloa Bay (Ironwoods)", lat: 21.0022, lon: -156.6585 },
-      { name: "Mokuula historic site", lat: 20.8696, lon: -156.6761 },
-      { name: "Front Street (near Banyan)", lat: 20.8720, lon: -156.6780 },
-      { name: "Kahoma Street", lat: 20.8905, lon: -156.6818 },
-      { name: "Lahainaluna Road", lat: 20.8781, lon: -156.6757 },
-      { name: "Lahaina Gateway", lat: 20.8866, lon: -156.6823 },
-      { name: "Lahaina Square Shopping Center", lat: 20.8811, lon: -156.6814 },
-      { name: "Royal Lahaina Resort", lat: 20.9318, lon: -156.6923 },
-      { name: "Old Lahaina Luau", lat: 20.8860, lon: -156.6852 },
-      { name: "Hanakaoo Beach Park (Canoe Beach)", lat: 20.9136, lon: -156.6925 },
-      { name: "Kamehameha Iki Park", lat: 20.8687, lon: -156.6762 },
-      { name: "Lahaina Aquatic Center", lat: 20.8696, lon: -156.6715 },
-      { name: "Honolua Bay", lat: 21.0131, lon: -156.6383 },
-      { name: "Slaughterhouse Beach (Mokuleia)", lat: 21.0111, lon: -156.6422 },
-      { name: "Kapalua Airport (JHM)", lat: 20.9626, lon: -156.6742 },
-      { name: "Mala Wharf", lat: 20.8894, lon: -156.6914 },
-      { name: "Marriott Maui Ocean Club", lat: 20.9165, lon: -156.6945 },
-      { name: "Honua Kai Resort", lat: 20.9365, lon: -156.6928 },
-      { name: "The Whaler on Kaanapali Beach", lat: 20.9226, lon: -156.6945 },
-      { name: "Kaanapali Golf Courses", lat: 20.9292, lon: -156.6933 },
-      { name: "Fairway Shops at Kaanapali", lat: 20.9245, lon: -156.6895 },
-      { name: "West Maui Shopping Center", lat: 20.8828, lon: -156.6814 },
-      { name: "Holy Innocents Episcopal Church", lat: 20.8728, lon: -156.6792 },
-      { name: "Hongwanji Mission", lat: 20.8736, lon: -156.6767 },
-      { name: "Hauola Stone", lat: 20.8758, lon: -156.6817 },
-      { name: "Lahaina Armory Park", lat: 20.8717, lon: -156.6792 },
-      { name: "Lahaina Post Office (downtown)", lat: 20.8772, lon: -156.6805 },
-      { name: "Safeway Lahaina", lat: 20.8865, lon: -156.6845 },
-      { name: "Foodland Honokowai", lat: 20.9560, lon: -156.6865 },
-      { name: "Princess Nahienaena Elementary", lat: 20.8845, lon: -156.6780 },
-      { name: "Lahaina Intermediate School", lat: 20.8820, lon: -156.6760 },
-      { name: "Feast at Lele", lat: 20.8685, lon: -156.6770 },
-      { name: "Lahaina Shores Beach Resort", lat: 20.8680, lon: -156.6775 },
-      { name: "Baby Beach (Puunoa)", lat: 20.8825, lon: -156.6865 },
-      { name: "Kapalua Plantation Course", lat: 21.0076, lon: -156.6439 },
-      { name: "Kapalua Bay Course", lat: 20.9985, lon: -156.6620 },
-      { name: "The Montage Kapalua Bay", lat: 21.0002, lon: -156.6658 },
-      { name: "Kahana Gateway Shopping Center", lat: 20.9755, lon: -156.6785 },
-      { name: "Napili Plaza", lat: 20.9905, lon: -156.6660 },
-      { name: "Honokowai Marketplace", lat: 20.9550, lon: -156.6870 },
-      { name: "Kaanapali Beach Walk (mid)", lat: 20.9200, lon: -156.6955 },
-      { name: "Dickenson Square", lat: 20.8772, lon: -156.6794 },
-      { name: "Prison Street (near Hale Paahao)", lat: 20.8724, lon: -156.6765 },
-      { name: "Kelawea Mauka III Park", lat: 20.8867, lon: -156.6706 },
-      { name: "Maui Eldorado Kaanapali", lat: 20.9218, lon: -156.6915 },
-      { name: "Outrigger Kaanapali Beach Resort", lat: 20.9195, lon: -156.6940 },
-      { name: "Westin Kaanapali Ocean Resort Villas", lat: 20.9335, lon: -156.6935 },
-      { name: "Aston Kaanapali Shores", lat: 20.9405, lon: -156.6915 }
+      {"name": "Banyan Tree Park", "lat": 20.8717945, "lon": -156.6776723},
+      {"name": "Old Lahaina Courthouse", "lat": 20.8716591, "lon": -156.6778824},
+      {"name": "Pioneer Inn", "lat": 20.8723208, "lon": -156.6780227},
+      {"name": "Baldwin Home Museum", "lat": 20.8732623, "lon": -156.6779163},
+      {"name": "Wo Hing Museum", "lat": 20.8763365, "lon": -156.6805351},
+      {"name": "Hale Paahao (Old Prison)", "lat": 20.872, "lon": -156.6748},
+      {"name": "Hauola Stone", "lat": 20.8726449, "lon": -156.6788694, "facts": "The Hauola Stone (Pōhaku o Hauola) in Lahaina, Maui, is a sacred, chair-shaped lava rock located where sea and freshwater meet. Dating back to the 14th century, ancient Hawaiian royalty used it as a sacred birthing stone and a site for healing baths."},
+      {"name": "Mokuula historic site", "lat": 20.8688421, "lon": -156.674493, "facts": "Mokuʻula is a one-acre historic island located in Lahaina, Maui, Hawaii, that served as the royal residence of King Kamehameha III in the 19th century. Between 1914 and 1918, the pond was completely filled in. Today, Mokuʻula lies entirely buried beneath a baseball field and parking lot at Maluʻulu o Lele Park."},
+      {"name": "Brick Palace site", "lat": 20.872629, "lon": -156.6786754, "facts": "The Brick Palace in Lahaina was the first Western-style building in the Hawaiian Islands, built for King Kamehameha the Great around 1798 to 1802."},
+      {"name": "Lahaina Lighthouse", "lat": 20.8721854, "lon": -156.6786352},
+      {"name": "Masters Reading Room", "lat": 20.8733684, "lon": -156.6779459},
+      {"name": "U.S. Seamen Hospital site", "lat": 20.879632, "lon": -156.6831315},
+      {"name": "Holy Innocents Episcopal Church", "lat": 20.8695715, "lon": -156.6763991},
+      {"name": "Maria Lanakila Catholic Church", "lat": 20.8751352, "lon": -156.6763937},
+      {"name": "Waiola Church", "lat": 20.8694654, "lon": -156.6733217},
+      {"name": "Waiola Cemetery", "lat": 20.8691521, "lon": -156.6731179},
+      {"name": "Lahaina Jodo Mission", "lat": 20.8827328, "lon": -156.6874033},
+      {"name": "Front St / Hotel St", "lat": 20.8724021, "lon": -156.6775831},
+      {"name": "Front St / Dickenson St", "lat": 20.8733862, "lon": -156.6781795},
+      {"name": "Front St / Prison St", "lat": 20.870875, "lon": -156.6765755},
+      {"name": "Lahainaluna Rd / Wainee St", "lat": 20.8765386, "lon": -156.6780961},
+      {"name": "Lahaina Harbor", "lat": 20.8708, "lon": -156.6783},
+      {"name": "Kamehameha Iki Park", "lat": 20.8687611, "lon": -156.6760504},
+      {"name": "Feast at Lele", "lat": 20.8676993, "lon": -156.6758278},
+      {"name": "Lahaina Shores Beach Resort", "lat": 20.8672916, "lon": -156.6751108},
+      {"name": "505 Front Street", "lat": 20.86798, "lon": -156.6755748},
+      {"name": "Puamana Beach Park", "lat": 20.8551, "lon": -156.6635},
+      {"name": "Launiupoko Beach Park", "lat": 20.8430473, "lon": -156.6528851},
+      {"name": "Lahaina Aquatic Center", "lat": 20.8697895, "lon": -156.6714817},
+      {"name": "Lahaina Recreation Center", "lat": 20.8677912, "lon": -156.6695201},
+      {"name": "Lahaina Yacht Club", "lat": 20.8757509, "lon": -156.6804653},
+      {"name": "Lahaina Public Library (old)", "lat": 20.8727727, "lon": -156.6782087},
+      {"name": "Pioneer Mill smokestack", "lat": 20.8785143, "lon": -156.6764608},
+      {"name": "Prison St / Wainee St", "lat": 20.8718847, "lon": -156.6744053},
+      {"name": "Prison St / Luakini St", "lat": 20.8713617, "lon": -156.6755632},
+      {"name": "Front St / Shaw St", "lat": 20.8679925, "lon": -156.6750312},
+      {"name": "Front St / Baker St", "lat": 20.879018, "lon": -156.6829437},
+      {"name": "Honoapiilani Hwy / Shaw St", "lat": 20.8689474, "lon": -156.6718993},
+      {"name": "Honoapiilani Hwy / Prison St", "lat": 20.8723475, "lon": -156.6733003},
+      {"name": "Malu Ulu o Lele Park", "lat": 20.8691847, "lon": -156.6745377},
+      {"name": "Lahaina Cannery Mall", "lat": 20.886166, "lon": -156.68414},
+      {"name": "Old Lahaina Luau", "lat": 20.886034, "lon": -156.6853219},
+      {"name": "Mala Wharf", "lat": 20.8851611, "lon": -156.6869965, "facts": "Opened in 1922 as a working shipping facility for agriculture, the Mala Wharf pier mostly destroyed by the waves of Hurricane Iniki in 1992. It is now a popular snorkeling spot."},
+      {"name": "Mala boat ramp", "lat": 20.8852873, "lon": -156.6867784},
+      {"name": "Baby Beach (Puunoa)", "lat": 20.8820512, "lon": -156.6875964},
+      {"name": "Lahaina Gateway", "lat": 20.8860658, "lon": -156.6815722},
+      {"name": "Foodland Farms Lahaina Gateway", "lat": 20.8852772, "lon": -156.6800129},
+      {"name": "Safeway Lahaina", "lat": 20.8867908, "lon": -156.6842437},
+      {"name": "Lahaina Square Shopping Center", "lat": 20.877719, "lon": -156.6782051},
+      {"name": "Lahaina Post Office (downtown)", "lat": 20.877308, "lon": -156.6804349},
+      {"name": "Dickenson Square", "lat": 20.8742405, "lon": -156.6767183},
+      {"name": "Kahoma Stream mouth", "lat": 20.8856356, "lon": -156.6862929},
+      {"name": "Puunoa Point", "lat": 20.882245, "lon": -156.6877842},
+      {"name": "Front St / Kenui St", "lat": 20.8810955, "lon": -156.68441},
+      {"name": "Front St / Ala Moana St", "lat": 20.8833259, "lon": -156.6852978},
+      {"name": "Honoapiilani Hwy / Keawe St", "lat": 20.8849105, "lon": -156.6821498},
+      {"name": "Honoapiilani Hwy / Kapunakea St", "lat": 20.8875109, "lon": -156.6831189},
+      {"name": "Lahainaluna Rd / Honoapiilani Hwy", "lat": 20.8774768, "lon": -156.677016},
+      {"name": "Mill Street / Lahainaluna Rd", "lat": 20.878059, "lon": -156.6762865},
+      {"name": "Lahaina Hongwanji Mission hall", "lat": 20.870736, "lon": -156.6737911},
+      {"name": "Lahaina Civic Center", "lat": 20.9050431, "lon": -156.6837448},
+      {"name": "Wahikuli Wayside Park", "lat": 20.8996993, "lon": -156.6849715},
+      {"name": "Princess Nahienaena Elementary", "lat": 20.8886519, "lon": -156.6638374},
+      {"name": "Lahaina Intermediate School", "lat": 20.8862963, "lon": -156.6622961},
+      {"name": "Lahainaluna High School", "lat": 20.8892132, "lon": -156.6594887},
+      {"name": "Lahainaluna High football field", "lat": 20.8865503, "lon": -156.6592589},
+      {"name": "David Malo Day site (Lahainaluna)", "lat": 20.8877022, "lon": -156.6588271, "facts": "Hosted annually at Border’s Field at Lahainaluna High School."},
+      {"name": "Leialii Parkway / Honoapiilani Hwy", "lat": 20.9020463, "lon": -156.6845298},
+      {"name": "Wahikuli / Honoapiilani Hwy turnout", "lat": 20.8950245, "lon": -156.6847832},
+      {"name": "Lahainaluna Rd / Kelawea St", "lat": 20.8810316, "lon": -156.6717387},
+      {"name": "Wahikuli Terrace Park", "lat": 20.891091, "lon": -156.6834301},
+      {"name": "Lahaina Bypass / Keawe St", "lat": 20.8887613, "lon": -156.6754121},
+      {"name": "Lahaina Bypass / Lahainaluna Rd", "lat": 20.883625, "lon": -156.6665956},
+      {"name": "Hanakaoo Beach Park (Canoe Beach)", "lat": 20.9109864, "lon": -156.6900373},
+      {"name": "Hyatt Regency Maui", "lat": 20.9128, "lon": -156.6919},
+      {"name": "Marriott Maui Ocean Club", "lat": 20.9158003, "lon": -156.6953874},
+      {"name": "The Westin Maui Resort", "lat": 20.9198725, "lon": -156.6950655},
+      {"name": "Kaanapali Beach Hotel", "lat": 20.9242552, "lon": -156.6937709},
+      {"name": "Whalers Village", "lat": 20.9214, "lon": -156.6949},
+      {"name": "The Whaler on Kaanapali Beach", "lat": 20.9225348, "lon": -156.6946471},
+      {"name": "Maui Eldorado Kaanapali", "lat": 20.927826, "lon": -156.6911316},
+      {"name": "Kaanapali Beach Walk (mid)", "lat": 20.9174723, "lon": -156.6964263},
+      {"name": "Hula Grill Kaanapali", "lat": 20.9217749, "lon": -156.6954714},
+      {"name": "Leilani's on the Beach", "lat": 20.9211769, "lon": -156.6956502},
+      {"name": "Royal Kaanapali Golf Clubhouse", "lat": 20.9180485, "lon": -156.6909277},
+      {"name": "Fairway Shops at Kaanapali", "lat": 20.9259855, "lon": -156.6905558},
+      {"name": "Kaanapali Parkway / Nohea Kai Dr", "lat": 20.918593, "lon": -156.6937423},
+      {"name": "Kaanapali Beach (south end)", "lat": 20.9106924, "lon": -156.6896689},
+      {"name": "Whalers Village parking garage", "lat": 20.9223227, "lon": -156.6939944},
+      {"name": "Hyatt Swan Court / lagoon", "lat": 20.9122383, "lon": -156.691829},
+      {"name": "Sheraton Maui Resort", "lat": 20.9265901, "lon": -156.6945022},
+      {"name": "Black Rock (Puu Kekaa)", "lat": 20.9266, "lon": -156.6968},
+      {"name": "Kahekili Beach Park", "lat": 20.9367646, "lon": -156.6922617},
+      {"name": "Royal Lahaina Resort", "lat": 20.9317442, "lon": -156.6923797},
+      {"name": "Honua Kai Resort", "lat": 20.9440994, "lon": -156.6908133},
+      {"name": "Westin Kaanapali Ocean Resort Villas", "lat": 20.9377666, "lon": -156.6915965},
+      {"name": "Aston Kaanapali Shores", "lat": 20.9494433, "lon": -156.6894722},
+      {"name": "Maui Kaanapali Villas", "lat": 20.9340189, "lon": -156.6912389},
+      {"name": "Kaanapali Landing", "lat": 20.9288332, "lon": -156.6955349},
+      {"name": "Black Rock snorkeling cove", "lat": 20.926874, "lon": -156.6970396},
+      {"name": "Kekaa Dr / Kaanapali Pkwy", "lat": 20.9226885, "lon": -156.692934},
+      {"name": "Honua Kai north tower", "lat": 20.9456758, "lon": -156.6906917},
+      {"name": "Royal Lahaina Tennis Ranch", "lat": 20.932763, "lon": -156.6906059},
+      {"name": "Kaanapali Beach (north end)", "lat": 20.9268841, "lon": -156.695863},
+      {"name": "Honokowai Beach Park", "lat": 20.9545415, "lon": -156.6864163},
+      {"name": "Honokowai Marketplace", "lat": 20.9483628, "lon": -156.6876948},
+      {"name": "Honokowai Park playground", "lat": 20.9541032, "lon": -156.6866335},
+      {"name": "Hale Mahina Beach Resort", "lat": 20.960517, "lon": -156.6840005},
+      {"name": "Kaleialoha condos", "lat": 20.9580282, "lon": -156.6851074},
+      {"name": "Paki Maui", "lat": 20.9533609, "lon": -156.6871762},
+      {"name": "Noelani condos", "lat": 20.9661233, "lon": -156.6821194},
+      {"name": "Mahina Surf", "lat": 20.9651716, "lon": -156.6828024},
+      {"name": "Lokelani condos", "lat": 20.9596796, "lon": -156.6845101},
+      {"name": "Honokowai Beach Park restrooms", "lat": 20.9540831, "lon": -156.6866818},
+      {"name": "Kapalua Airport (JHM)", "lat": 20.9619105, "lon": -156.6743016},
+      {"name": "Mahinahina Stream mouth", "lat": 20.9602496, "lon": -156.6843926},
+      {"name": "Honokowai Stream mouth", "lat": 20.9505642, "lon": -156.6903847},
+      {"name": "Hale Kai Honokowai", "lat": 20.9554315, "lon": -156.6860354},
+      {"name": "Kaanapali Beach Club", "lat": 20.9485215, "lon": -156.6907132},
+      {"name": "Hololani Resort", "lat": 20.9728339, "lon": -156.6793334},
+      {"name": "Papakea Resort", "lat": 20.9509562, "lon": -156.6888142},
+      {"name": "Pohaku Park (S-Turns)", "lat": 20.9678, "lon": -156.6812},
+      {"name": "Kahana Gateway Shopping Center", "lat": 20.9724666, "lon": -156.677666},
+      {"name": "Kahana Village", "lat": 20.9766775, "lon": -156.6775793},
+      {"name": "Kahana Reef", "lat": 20.9747724, "lon": -156.6786557},
+      {"name": "Kahana Sunset", "lat": 20.9848484, "lon": -156.6717196},
+      {"name": "Valley Isle Resort", "lat": 20.9713245, "lon": -156.679675},
+      {"name": "Kahana Manor", "lat": 20.9708637, "lon": -156.6781157},
+      {"name": "Kahana Falls", "lat": 20.9692123, "lon": -156.678763},
+      {"name": "S-Turns surf break", "lat": 20.9674374, "lon": -156.683321},
+      {"name": "Kahana Stream mouth", "lat": 20.9775231, "lon": -156.6773558},
+      {"name": "Lower Honoapiilani Rd / Hui Rd F", "lat": 20.9919546, "lon": -156.6671374},
+      {"name": "Honoapiilani Hwy / Kahana Nui Rd", "lat": 20.9754202, "lon": -156.6757652},
+      {"name": "Nohonani condos", "lat": 20.9563194, "lon": -156.6857435},
+      {"name": "Kahana Outrigger", "lat": 20.9756506, "lon": -156.6779119},
+      {"name": "Hui Rd E beach access", "lat": 20.9837048, "lon": -156.6741836},
+      {"name": "Kahana Beach (mid)", "lat": 20.9696582, "lon": -156.6802955},
+      {"name": "Lower Honoapiilani Rd / Office Rd", "lat": 21.0030713, "lon": -156.65625},
+      {"name": "Kahana Pump station area", "lat": 20.9763694, "lon": -156.6769972},
+      {"name": "Napili Bay", "lat": 20.9958553, "lon": -156.6672188},
+      {"name": "Napili Kai Beach Resort", "lat": 20.9970089, "lon": -156.6656184},
+      {"name": "Napili Plaza", "lat": 20.9849219, "lon": -156.667074},
+      {"name": "Napili Shores", "lat": 20.9930657, "lon": -156.6676784},
+      {"name": "The Mauian on Napili Bay", "lat": 20.9955147, "lon": -156.6656166},
+      {"name": "Napili Point Resort", "lat": 20.9922744, "lon": -156.6682756},
+      {"name": "Napili Surf Beach Resort", "lat": 20.993877, "lon": -156.6673011},
+      {"name": "Honokeana Cove", "lat": 20.9916733, "lon": -156.6687906},
+      {"name": "Lower Honoapiilani Rd / Napilihau St", "lat": 20.9869929, "lon": -156.6685885},
+      {"name": "Honoapiilani Hwy / Napilihau St", "lat": 20.9846381, "lon": -156.6657418},
+      {"name": "Napili Park", "lat": 20.9875731, "lon": -156.660465},
+      {"name": "Gazebo Restaurant (Napili Kai)", "lat": 20.9938678, "lon": -156.6682148},
+      {"name": "Lower Honoapiilani Rd / Hui Rd", "lat": 20.9935915, "lon": -156.6657731},
+      {"name": "Napili Bay public access path", "lat": 20.9946892, "lon": -156.6664267},
+      {"name": "Kapalua Bay", "lat": 20.9999, "lon": -156.6676},
+      {"name": "The Montage Kapalua Bay", "lat": 21.0015763, "lon": -156.6652429},
+      {"name": "The Ritz-Carlton, Kapalua", "lat": 21.0016497, "lon": -156.6540778},
+      {"name": "DT Fleming Beach Park", "lat": 21.0047647, "lon": -156.6517568},
+      {"name": "Oneloa Bay (Ironwoods)", "lat": 21.0045878, "lon": -156.6596317},
+      {"name": "Honolua Bay", "lat": 21.0146968, "lon": -156.6395617},
+      {"name": "Slaughterhouse Beach (Mokuleia)", "lat": 21.0111447, "lon": -156.6421169},
+      {"name": "DT Fleming lifeguard tower", "lat": 21.0047923, "lon": -156.6506848},
+      {"name": "Plantation Course clubhouse", "lat": 21.0071351, "lon": -156.6402787},
+      {"name": "Office Rd / Honoapiilani Hwy", "lat": 20.9929079, "lon": -156.653055},
+      {"name": "Ritz-Carlton spa / lawn", "lat": 21.0016088, "lon": -156.6545427},
+      {"name": "Oneloa / Ironwoods access", "lat": 21.002961, "lon": -156.6586053},
+      {"name": "Honolua Bay trailhead parking", "lat": 21.0135301, "lon": -156.6339406},
+      {"name": "Slaughterhouse stairs top", "lat": 21.0106565, "lon": -156.6424227},
+      {"name": "Olowalu General Store", "lat": 20.811423, "lon": -156.6220397},
+      {"name": "Olowalu Beach", "lat": 20.8094339, "lon": -156.6147673},
+      {"name": "Ukumehame Beach Park", "lat": 20.7946906, "lon": -156.581955},
+      {"name": "Puamana Condominiums", "lat": 20.8581534, "lon": -156.6663158},
+      {"name": "The Wharf Cinema Center", "lat": 20.8725664, "lon": -156.6768569},
+      {"name": "Fleetwood's on Front St", "lat": 20.8743383, "lon": -156.678713},
+      {"name": "Kimo's", "lat": 20.8760099, "lon": -156.6805986},
+      {"name": "Cheeseburger in Paradise", "lat": 20.8753457, "lon": -156.6800246},
+      {"name": "Lahaina Grill", "lat": 20.8755554, "lon": -156.6795427},
+      {"name": "Longhi's Lahaina", "lat": 20.877009, "lon": -156.6810358},
+      {"name": "Lahaina Center", "lat": 20.8781133, "lon": -156.6809392},
+      {"name": "Longs Drugs Cannery Mall", "lat": 20.8857008, "lon": -156.6843715},
+      {"name": "Ace Hardware Lahaina", "lat": 20.8866079, "lon": -156.6822723},
+      {"name": "Walgreens Lahaina", "lat": 20.884345, "lon": -156.6809553},
+      {"name": "McDonald's Lahaina", "lat": 20.8778402, "lon": -156.6793594},
+      {"name": "Hale Pai Print Shop", "lat": 20.8899233, "lon": -156.659807},
+      {"name": "Lahaina Sugar Cane Train Depot", "lat": 20.8803796, "lon": -156.6794202},
+      {"name": "Front St / Papalaua St", "lat": 20.8771084, "lon": -156.6812539},
+      {"name": "Wainee St / Dickenson St", "lat": 20.8746891, "lon": -156.6765913},
+      {"name": "Maui Medical Group Lahaina", "lat": 20.8710192, "lon": -156.6756061},
+      {"name": "Sacred Hearts School", "lat": 20.8756, "lon": -156.676},
+      {"name": "Kaanapali Alii", "lat": 20.9183642, "lon": -156.6956466},
+      {"name": "Westin Nanea Ocean Villas", "lat": 20.9425346, "lon": -156.6908848},
+      {"name": "Mahana at Kaanapali", "lat": 20.9466711, "lon": -156.6918862},
+      {"name": "Kaanapali Royal", "lat": 20.9221874, "lon": -156.6906595},
+      {"name": "Duke's Beach House", "lat": 20.9445995, "lon": -156.6916895},
+      {"name": "Drums of the Pacific Luau", "lat": 20.9117623, "lon": -156.6910771},
+      {"name": "Royal Lahaina Luau", "lat": 20.9328783, "lon": -156.6926086},
+      {"name": "Pizza Paradiso Honokowai", "lat": 20.9485983, "lon": -156.6876858},
+      {"name": "Sands of Kahana", "lat": 20.9701457, "lon": -156.6795123},
+      {"name": "Kahana Villa", "lat": 20.9684326, "lon": -156.6795319},
+      {"name": "Pohailani Maui", "lat": 20.9735452, "lon": -156.6784},
+      {"name": "Hale Ono Loa", "lat": 20.9588861, "lon": -156.6845461},
+      {"name": "Hoyochi Nikko", "lat": 20.9609412, "lon": -156.6837108},
+      {"name": "Maui Preparatory Academy", "lat": 20.9825812, "lon": -156.6685975},
+      {"name": "Sea House Restaurant", "lat": 20.9967, "lon": -156.6659224},
+      {"name": "Napili Market", "lat": 20.9850204, "lon": -156.6675541},
+      {"name": "Honolua Store", "lat": 20.9988135, "lon": -156.6545874},
+      {"name": "Merriman's Kapalua", "lat": 20.998422, "lon": -156.6671777},
+      {"name": "Sansei Seafood Kapalua", "lat": 20.9984137, "lon": -156.6543961},
+      {"name": "The Burger Shack Kapalua", "lat": 21.0042405, "lon": -156.6519508},
+      {"name": "Kapalua Tennis Garden", "lat": 20.9976566, "lon": -156.6642255},
+      {"name": "Kapalua Bay Villas", "lat": 21.0029418, "lon": -156.6627824},
+      {"name": "Pineapple Hill Kapalua", "lat": 20.9930557, "lon": -156.6570354},
+      {"name": "Punalau Beach (Windmills)", "lat": 21.022148, "lon": -156.6255534},
+      {"name": "Honokohau Bay", "lat": 21.0219777, "lon": -156.6098285}
     ];
 
-    function seededRandom(seedStr) {
-      let h = 2166136261 >>> 0;
-      for (let i = 0; i < seedStr.length; i++) {
-        h ^= seedStr.charCodeAt(i);
+    function hawaiiToday() {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Pacific/Honolulu', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date());
+    }
+    function prettyDate(iso) {
+      const [y,m,d] = iso.split('-').map(Number);
+      return new Date(Date.UTC(y, m-1, d, 18)).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', timeZone: 'Pacific/Honolulu'
+      });
+    }
+    function hashString(s) {
+      let h = 2166136261;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
         h = Math.imul(h, 16777619);
       }
+      return h >>> 0;
+    }
+    function mulberry32(a) {
       return function() {
-        h += 0x6D2B79F5;
-        let t = Math.imul(h ^ (h >>> 15), 1 | h);
-        t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
       };
     }
-
-    function getTodayKey() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      return y + '-' + m + '-' + d;
-    }
-
-    function getTodayLocations() {
-      const key = getTodayKey();
-      const rng = seededRandom(key + '-lahainatap-v10');
-      const indices = [];
-      while (indices.length < 5) {
-        const idx = Math.floor(rng() * LOCATIONS.length);
-        if (!indices.includes(idx)) indices.push(idx);
+    function pickDaily(dateStr) {
+      const rng = mulberry32(hashString('lahainatap|' + dateStr + '|v1'));
+      const idx = LOCATIONS.map(function(_, i) { return i; });
+      for (let i = idx.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = idx[i]; idx[i] = idx[j]; idx[j] = tmp;
       }
-      return { key: key, list: indices.map(function(i) { return LOCATIONS[i]; }) };
+      return idx.slice(0, 5).map(function(i) { return LOCATIONS[i]; });
     }
 
     function haversine(lat1, lon1, lat2, lon2) {
@@ -305,20 +426,31 @@
                 Math.sin(dLon/2)*Math.sin(dLon/2);
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
-
     function lerp(a, b, t) { return a + (b - a) * t; }
-
     function scoreFromMeters(m) {
       const ft = m * 3.28084;
-      if (ft <= 500) return 100;
-      if (ft <= 1000) return Math.round(lerp(100, 95, (ft - 500) / 500));
-      if (ft <= 2000) return Math.round(lerp(95, 90, (ft - 1000) / 1000));
-      if (ft <= 5280) return Math.round(lerp(90, 65, (ft - 2000) / 3280));
-      if (ft <= 10560) return Math.round(lerp(65, 30, (ft - 5280) / 5280));
-      if (ft <= 15840) return Math.round(lerp(30, 0, (ft - 10560) / 5280));
+      const curve = [
+        [0, 100], [300, 100], [600, 95], [1200, 90], [2000, 85],
+        [4000, 75], [8000, 65], [16000, 45], [32000, 25], [64000, 0]
+      ];
+      if (ft <= curve[0][0]) return curve[0][1];
+      if (ft >= curve[curve.length - 1][0]) return 0;
+      for (let i = 1; i < curve.length; i++) {
+        if (ft <= curve[i][0]) {
+          const t = (ft - curve[i - 1][0]) / (curve[i][0] - curve[i - 1][0]);
+          return Math.round(lerp(curve[i - 1][1], curve[i][1], t));
+        }
+      }
       return 0;
     }
-
+    function scoreMessage(total) {
+      if (total >= 1000) return 'Perfect!';
+      if (total >= 950) return 'Outstanding!';
+      if (total >= 850) return 'Great Job!';
+      if (total >= 700) return 'Nice work!';
+      if (total >= 500) return 'Not bad!';
+      return 'Better luck tomorrow!';
+    }
     function formatDistance(meters) {
       const feet = meters * 3.28084;
       if (feet < 5280) return Math.round(feet).toLocaleString() + ' feet away';
@@ -327,25 +459,25 @@
     }
 
     let audioCtx = null;
-    function getAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      return audioCtx;
+    function unlockAudio() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      } catch (e) {}
     }
     function playTone(freq, duration, type, volume) {
-      type = type || 'sine';
-      volume = volume || 0.15;
       try {
-        const ctx = getAudio();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
+        unlockAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'sine';
         osc.frequency.value = freq;
-        gain.gain.value = volume;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.gain.value = volume || 0.15;
+        osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.stop(ctx.currentTime + duration);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
       } catch (e) {}
     }
     function playTap() { playTone(880, 0.08, 'sine', 0.12); }
@@ -359,211 +491,320 @@
       });
     }
 
-    let map, guessMarker, trueMarker, line;
-    let dayData = null;
+    const guessIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;background:#38bdf8;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.55)"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+    const trueIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;background:#f59e0b;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.55)"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+
+    let map, guessMarker, trueMarker, line, reviewLayer;
+    let today = hawaiiToday();
+    let roundList = pickDaily(today);
     let roundIndex = 0;
     let guessLatLng = null;
-    let hasGuessedThisRound = false;
     let roundScores = [];
-    let roundDists = [];
-    const STORAGE_KEY = 'lahainatap_v10';
+    let roundGuesses = [];
+    let lastSharePlain = '';
+    let lastShareHtml = '';
+    let playing = false;
 
-    function loadState() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
-      catch (e) { return {}; }
+    function loadPlayed() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data && data.date === today && Array.isArray(data.scores) && data.scores.length === 5) return data;
+      } catch (e) {}
+      return null;
     }
-    function saveState(obj) { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }
+    function savePlayed(scores) {
+      const payload = {
+        date: today,
+        scores: scores,
+        names: roundList.map(function(x){ return x.name; }),
+        guesses: roundGuesses
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
 
-    function updateRunningTotal() {
-      const raw = roundScores.reduce(function(a, b) { return a + b; }, 0);
+    function sharePayload(scores) {
+      const total = scores.reduce(function(a,b){ return a+b; }, 0) * 2;
+      const line1 = 'LahainaTap ' + today;
+      const line3 = scores.join(', ');
+      const line4 = 'Final: ' + total + '/1000 - ' + scoreMessage(total);
+      return {
+        plain: line1 + '\nLink: ' + SHARE_URL + '\n' + line3 + '\n' + line4,
+        html: line1 + '<br>Link: <a href="' + SHARE_URL + '">' + SHARE_URL + '</a><br>' + line3 + '<br>' + line4
+      };
+    }
+    function paintShareBox(el, scores) {
+      const s = sharePayload(scores);
+      lastSharePlain = s.plain;
+      lastShareHtml = s.html;
+      el.innerHTML = s.html;
+    }
+    function recapHtml(names, scores, guesses) {
+      let html = '';
+      for (let i = 0; i < 5; i++) {
+        const g = guesses && guesses[i];
+        const dist = (g && g.meters != null) ? formatDistance(g.meters) : '';
+        html += '<div class="recap-row"><span class="recap-num">' + (i + 1) + '</span>' +
+          '<span class="recap-name">' + (names[i] || '') + '</span>' +
+          '<span class="recap-meta"><span class="recap-pts">' + scores[i] + '</span>' +
+          (dist ? '<span class="recap-dist">' + dist + '</span>' : '') +
+          '</span></div>';
+      }
+      return html;
+    }
+
+    function setStatus(t) { document.getElementById('status').textContent = t; }
+    function renderDots() {
+      const wrap = document.getElementById('progress');
+      wrap.innerHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot' + (i < roundIndex ? ' done' : i === roundIndex ? ' current' : '');
+        wrap.appendChild(d);
+      }
+    }
+    function updateTotal() {
+      const raw = roundScores.reduce(function(a,b){ return a+b; }, 0);
       document.getElementById('running-total').textContent = (raw * 2) + ' / 1000';
     }
 
     function initMap() {
-      map = L.map('map', { center: [20.92, -156.68], zoom: 12, minZoom: 11, maxZoom: 18 });
+      if (map) return;
+      map = L.map('map', {
+        center: [20.92, -156.68],
+        zoom: 12,
+        minZoom: 11,
+        maxZoom: 19,
+        zoomControl: true
+      });
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles (c) Esri', maxZoom: 19
+        attribution: 'Esri', maxZoom: 19
       }).addTo(map);
+      map.setMaxBounds(L.latLngBounds([[20.76, -156.73], [21.05, -156.55]]));
       map.on('click', onMapClick);
+      setTimeout(function(){ map.invalidateSize(); }, 80);
     }
 
-    function clearRoundMarkers() {
+    function numberedIcon(color, n) {
+      return L.divIcon({
+        className: '',
+        html: '<div style="width:20px;height:20px;background:' + color + ';border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.55);color:#0f172a;font:700 11px/16px -apple-system,sans-serif;text-align:center">' + n + '</div>',
+        iconSize: [20,20], iconAnchor: [10,10]
+      });
+    }
+    function clearMarks() {
       if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
       if (trueMarker) { map.removeLayer(trueMarker); trueMarker = null; }
       if (line) { map.removeLayer(line); line = null; }
-      guessLatLng = null;
-      hasGuessedThisRound = false;
+      if (reviewLayer) { map.removeLayer(reviewLayer); reviewLayer = null; }
+    }
+    function showAllPins(guesses) {
+      if (!map || !guesses || !guesses.length) return;
+      clearMarks();
+      reviewLayer = L.layerGroup().addTo(map);
+      const pts = [];
+      for (let i = 0; i < 5; i++) {
+        const loc = roundList[i];
+        const g = guesses[i];
+        if (!loc) continue;
+        const tLatLng = L.latLng(loc.lat, loc.lon);
+        L.marker(tLatLng, { icon: numberedIcon('#f59e0b', i + 1), zIndexOffset: 400 }).addTo(reviewLayer);
+        pts.push(tLatLng);
+        if (g && g.lat != null) {
+          const gLatLng = L.latLng(g.lat, g.lng);
+          L.marker(gLatLng, { icon: numberedIcon('#38bdf8', i + 1), zIndexOffset: 300 }).addTo(reviewLayer);
+          L.polyline([gLatLng, tLatLng], { color: '#f8fafc', weight: 2, dashArray: '5 6', opacity: 0.85 }).addTo(reviewLayer);
+          pts.push(gLatLng);
+        }
+      }
+      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2));
+      setTimeout(function(){ map.invalidateSize(); }, 80);
     }
 
     function onMapClick(e) {
-      if (hasGuessedThisRound) return;
+      if (!playing) return;
+      unlockAudio();
       playTap();
       guessLatLng = e.latlng;
-      if (guessMarker) {
-        guessMarker.setLatLng(e.latlng);
-      } else {
-        guessMarker = L.marker(e.latlng, {
-          icon: L.divIcon({
-            className: '',
-            html: '<div style="background:#0ea5e9;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
-          })
-        }).addTo(map);
-      }
-      document.getElementById('submit-btn').disabled = false;
-      document.getElementById('submit-btn').textContent = 'Submit guess';
+      if (guessMarker) map.removeLayer(guessMarker);
+      guessMarker = L.marker(guessLatLng, { icon: guessIcon, zIndexOffset: 300 }).addTo(map);
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = false;
+      btn.textContent = 'Submit';
     }
 
-    function updateProgressDots() {
-      const el = document.getElementById('progress');
-      el.innerHTML = '';
-      for (let i = 0; i < 5; i++) {
-        const d = document.createElement('div');
-        d.className = 'dot';
-        if (i < roundIndex) d.classList.add('done');
-        if (i === roundIndex) d.classList.add('current');
-        el.appendChild(d);
-      }
-    }
-
-    function showCurrentLocation() {
-      clearRoundMarkers();
-      const current = dayData.list[roundIndex];
-      document.getElementById('address').textContent = current.name;
-      document.getElementById('round-label').textContent = '(' + (roundIndex + 1) + ' of 5)';
+    function showGuessing() {
+      playing = true;
+      guessLatLng = null;
       document.getElementById('prompt').style.display = 'block';
+      document.getElementById('top-bar').classList.add('show');
       document.getElementById('controls').style.display = 'block';
       document.getElementById('round-result').classList.remove('show');
       document.getElementById('final-result').classList.remove('show');
-      document.getElementById('submit-btn').disabled = true;
-      document.getElementById('submit-btn').textContent = 'Tap the map to place your guess';
-      updateProgressDots();
-      updateRunningTotal();
-      map.setView([20.93, -156.68], 12);
+      document.getElementById('locked').classList.remove('show');
+      document.getElementById('address').textContent = roundList[roundIndex].name;
+      document.getElementById('round-label').textContent = '(' + (roundIndex + 1) + ' of 5)';
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Tap the map to place your guess';
+      setStatus('Tap the map, then Submit.');
+      renderDots();
+      updateTotal();
+      initMap();
+      clearMarks();
+      map.setView([20.92, -156.68], 12);
+      setTimeout(function(){ map.invalidateSize(); }, 60);
     }
 
     function submitGuess() {
-      if (!guessLatLng || hasGuessedThisRound) return;
-      hasGuessedThisRound = true;
+      if (!playing || !guessLatLng) return;
+      unlockAudio();
       playSubmit();
-      const current = dayData.list[roundIndex];
-      const dist = haversine(guessLatLng.lat, guessLatLng.lng, current.lat, current.lon);
-      const score = scoreFromMeters(dist);
-      roundScores.push(score);
-      roundDists.push(Math.round(dist));
-      updateRunningTotal();
-
-      trueMarker = L.marker([current.lat, current.lon], {
-        icon: L.divIcon({
-          className: '',
-          html: '<div style="background:#22c55e;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>',
-          iconSize: [18, 18],
-          iconAnchor: [9, 9]
-        })
+      playing = false;
+      const loc = roundList[roundIndex];
+      const meters = haversine(guessLatLng.lat, guessLatLng.lng, loc.lat, loc.lon);
+      const pts = scoreFromMeters(meters);
+      roundScores.push(pts);
+      roundGuesses.push({ lat: guessLatLng.lat, lng: guessLatLng.lng, meters: meters });
+      trueMarker = L.marker([loc.lat, loc.lon], { icon: trueIcon, zIndexOffset: 400 }).addTo(map);
+      line = L.polyline([guessLatLng, [loc.lat, loc.lon]], {
+        color: '#f8fafc', weight: 2, dashArray: '5 6', opacity: 0.9
       }).addTo(map);
-
-      line = L.polyline([[guessLatLng.lat, guessLatLng.lng], [current.lat, current.lon]], {
-        color: '#fbbf24', weight: 3, dashArray: '6 6'
-      }).addTo(map);
-
-      map.fitBounds(L.latLngBounds([guessLatLng, [current.lat, current.lon]]).pad(0.4));
-
+      map.fitBounds(L.latLngBounds([guessLatLng, [loc.lat, loc.lon]]).pad(0.45));
       document.getElementById('controls').style.display = 'none';
-      document.getElementById('round-result').classList.add('show');
-      document.getElementById('round-score').textContent = score + ' / 100';
-      document.getElementById('round-dist').textContent = formatDistance(dist);
-      document.getElementById('next-btn').textContent = roundIndex === 4 ? 'See final score' : 'Next location';
-    }
-
-    function nextRound() {
-      roundIndex++;
-      if (roundIndex >= 5) finishGame();
-      else showCurrentLocation();
-    }
-
-    function spawnParticles() {
-      const container = document.getElementById('final-result');
-      const colors = ['#38bdf8', '#22c55e', '#fbbf24', '#f472b6', '#a78bfa'];
-      for (let i = 0; i < 28; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = (10 + Math.random() * 80) + '%';
-        p.style.top = (5 + Math.random() * 20) + '%';
-        p.style.background = colors[Math.floor(Math.random() * colors.length)];
-        p.style.animationDelay = (Math.random() * 0.4) + 's';
-        container.appendChild(p);
-        setTimeout(function() { p.remove(); }, 1800);
+      document.getElementById('round-score').textContent = pts + ' / 100';
+      document.getElementById('round-dist').textContent = formatDistance(meters);
+      const factsEl = document.getElementById('round-facts');
+      if (loc.facts) {
+        document.getElementById('round-facts-text').textContent = loc.facts;
+        factsEl.style.display = 'block';
+      } else {
+        factsEl.style.display = 'none';
       }
+      document.getElementById('next-btn').textContent = roundIndex === 4 ? 'See final score' : 'Next';
+      document.getElementById('round-result').classList.add('show');
+      updateTotal();
+      setStatus('Blue = your guess. Gold = the place.');
+    }
+
+    function nextLocation() {
+      roundIndex += 1;
+      if (roundIndex >= 5) {
+        finishGame();
+        return;
+      }
+      showGuessing();
     }
 
     function finishGame() {
-      const raw = roundScores.reduce(function(a, b) { return a + b; }, 0);
-      const finalScore = raw * 2;
+      savePlayed(roundScores);
       document.getElementById('prompt').style.display = 'none';
       document.getElementById('controls').style.display = 'none';
       document.getElementById('round-result').classList.remove('show');
-      document.getElementById('top-bar').classList.remove('show');
+      const raw = roundScores.reduce(function(a,b){ return a+b; }, 0);
+      const total = raw * 2;
+      document.getElementById('total-score').textContent = total + ' / 1000';
+      document.getElementById('score-breakdown').textContent = scoreMessage(total);
+      document.getElementById('recap-list').innerHTML = recapHtml(roundList.map(function(x){ return x.name; }), roundScores, roundGuesses);
+      document.body.classList.add('endgame');
+      paintShareBox(document.getElementById('share-box'), roundScores);
       document.getElementById('final-result').classList.add('show');
-      document.getElementById('total-score').textContent = finalScore + ' / 1000';
-      document.getElementById('score-breakdown').textContent =
-        roundScores.map(function(s, i) { return '#' + (i+1) + ': ' + s; }).join('  |  ');
-
-      const tag = finalScore >= 900 ? '[great]' : finalScore >= 750 ? '[solid]' : finalScore >= 550 ? '[ok]' : '[try again]';
-      document.getElementById('share-box').textContent =
-  'LahainaTap ' + dayData.key + '\n' +
-  roundScores.join(' ') + ' ' + tag + '\n' +
-  'Final: ' + finalScore + '/1000\n' +
-  'https://moonmassdriver.github.io/LahainaTap/';
-
+      setStatus('Blue = guess. Gold = place. Same number is a pair.');
+      renderDots();
+      showAllPins(roundGuesses);
       playVictory();
-      setTimeout(function() {
-        document.getElementById('victory-banner').classList.add('show');
-        document.getElementById('total-score').style.transform = 'scale(1.08)';
-        setTimeout(function() { document.getElementById('total-score').style.transform = 'scale(1)'; }, 400);
-        spawnParticles();
-      }, 200);
-
-      const state = loadState();
-      state[dayData.key] = { total: finalScore, scores: roundScores, dists: roundDists };
-      saveState(state);
+      const banner = document.getElementById('victory-banner');
+      banner.classList.remove('show');
+      void banner.offsetWidth;
+      banner.classList.add('show');
+      burstParticles(document.getElementById('final-result'));
     }
 
-    function showAlreadyPlayed(prev) {
-      document.getElementById('status').style.display = 'none';
-      document.getElementById('prompt').style.display = 'none';
-      document.getElementById('map').style.display = 'none';
-      document.getElementById('controls').style.display = 'none';
-      document.getElementById('top-bar').style.display = 'none';
-      document.getElementById('already').style.display = 'block';
-      document.getElementById('prev-score').innerHTML =
-        'You scored <strong style="color:#38bdf8">' + prev.total + '</strong> / 1000<br>' +
-        '<span style="color:#94a3b8;font-size:0.9rem">' + prev.scores.join(' | ') + '</span>';
-    }
-
-    function startGame() {
-      dayData = getTodayLocations();
-      const state = loadState();
-      if (state[dayData.key]) {
-        showAlreadyPlayed(state[dayData.key]);
-        return;
+    function burstParticles(parent) {
+      const colors = ['#38bdf8','#fbbf24','#22c55e','#f472b6','#a78bfa'];
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = (8 + Math.random() * 84) + '%';
+        p.style.top = '8px';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDelay = (Math.random() * 0.25) + 's';
+        parent.appendChild(p);
+        setTimeout(function(){ p.remove(); }, 1800);
       }
-      document.getElementById('status').textContent = 'Today - ' + dayData.key + ' - 5 locations';
-      document.getElementById('top-bar').classList.add('show');
-      initMap();
-      showCurrentLocation();
     }
 
-    document.getElementById('submit-btn').addEventListener('click', submitGuess);
-    document.getElementById('next-btn').addEventListener('click', nextRound);
-    document.getElementById('copy-btn').addEventListener('click', function() {
-      navigator.clipboard.writeText(document.getElementById('share-box').textContent).then(function() {
-        document.getElementById('copy-btn').textContent = 'Copied!';
-        setTimeout(function() { document.getElementById('copy-btn').textContent = 'Copy result'; }, 1500);
-      });
-    });
-    document.body.addEventListener('click', function() { getAudio(); }, { once: true });
-    startGame();
+    function copyShare(btn) {
+      const done = function() {
+        const old = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(function(){ btn.textContent = old; }, 1200);
+      };
+      const plain = lastSharePlain;
+      const html = lastShareHtml;
+      if (navigator.clipboard && window.ClipboardItem) {
+        const item = new ClipboardItem({
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' })
+        });
+        navigator.clipboard.write([item]).then(done).catch(function() {
+          navigator.clipboard.writeText(plain).then(done).catch(function(){ fallbackCopy(plain, done); });
+        });
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(plain).then(done).catch(function(){ fallbackCopy(plain, done); });
+      } else fallbackCopy(plain, done);
+    }
+    function fallbackCopy(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      ta.remove(); done();
+    }
+
+    function showLocked(data) {
+      initMap();
+      document.getElementById('top-bar').classList.add('show');
+      document.getElementById('prompt').style.display = 'none';
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('round-result').classList.remove('show');
+      const raw = data.scores.reduce(function(a,b){ return a+b; }, 0);
+      const total = raw * 2;
+      document.getElementById('running-total').textContent = total + ' / 1000';
+      roundIndex = 5;
+      renderDots();
+      document.getElementById('locked-score').textContent = total + ' / 1000';
+      document.getElementById('locked-break').textContent = scoreMessage(total);
+      const names = data.names || roundList.map(function(x){ return x.name; });
+      document.getElementById('locked-list').innerHTML = recapHtml(names, data.scores, data.guesses);
+      document.body.classList.add('endgame');
+      paintShareBox(document.getElementById('locked-share'), data.scores);
+      document.getElementById('locked').classList.add('show');
+      setStatus('Already finished today’s five.');
+      if (data.guesses && data.guesses.length) showAllPins(data.guesses);
+    }
+
+    document.getElementById('submit-btn').onclick = function() { unlockAudio(); submitGuess(); };
+    document.getElementById('next-btn').onclick = nextLocation;
+    document.getElementById('copy-btn').onclick = function() { copyShare(this); };
+    document.getElementById('locked-copy').onclick = function() { copyShare(this); };
+    document.body.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+    document.body.addEventListener('click', unlockAudio, { once: true });
+
+    const existing = loadPlayed();
+    if (existing) {
+      showLocked(existing);
+    } else {
+      showGuessing();
+    }
   </script>
 </body>
 </html>
