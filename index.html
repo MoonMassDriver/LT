@@ -161,7 +161,8 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const SHARE_URL = 'https://bit.ly/4wYYtN9';
+    const SHARE_URL = 'https://moonmassdriver.github.io/LT';
+    const SHARE_DISPLAY = 'moonmassdriver.github.io/LT';
     const STORAGE_KEY = 'lahainatap_daily_v3';
     const LOCATIONS = [
       {"name": "Banyan Tree Park", "lat": 20.8717945, "lon": -156.6776723},
@@ -510,7 +511,6 @@
     let roundScores = [];
     let roundGuesses = [];
     let lastSharePlain = '';
-    let lastShareHtml = '';
     let playing = false;
 
     function loadPlayed() {
@@ -537,16 +537,11 @@
       const line1 = 'LahainaTap ' + today;
       const line3 = scores.join(', ');
       const line4 = 'Final: ' + total + '/1000 - ' + scoreMessage(total);
-      return {
-        plain: line1 + '\nLink: ' + SHARE_URL + '\n' + line3 + '\n' + line4,
-        html: line1 + '<br>Link: <a href="' + SHARE_URL + '">' + SHARE_URL + '</a><br>' + line3 + '<br>' + line4
-      };
+      return line1 + '\n' + SHARE_DISPLAY + '\n' + line3 + '\n' + line4;
     }
     function paintShareBox(el, scores) {
-      const s = sharePayload(scores);
-      lastSharePlain = s.plain;
-      lastShareHtml = s.html;
-      el.innerHTML = s.html;
+      lastSharePlain = sharePayload(scores);
+      el.textContent = lastSharePlain;
     }
     function recapHtml(names, scores, guesses) {
       let html = '';
@@ -750,16 +745,7 @@
         setTimeout(function(){ btn.textContent = old; }, 1200);
       };
       const plain = lastSharePlain;
-      const html = lastShareHtml;
-      if (navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({
-          'text/plain': new Blob([plain], { type: 'text/plain' }),
-          'text/html': new Blob([html], { type: 'text/html' })
-        });
-        navigator.clipboard.write([item]).then(done).catch(function() {
-          navigator.clipboard.writeText(plain).then(done).catch(function(){ fallbackCopy(plain, done); });
-        });
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(plain).then(done).catch(function(){ fallbackCopy(plain, done); });
       } else fallbackCopy(plain, done);
     }
