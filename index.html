@@ -44,6 +44,16 @@
     #credits-modal.show { display: block; }
     #credits-modal h2 { font-size: 1rem; color: #38bdf8; margin-bottom: 10px; }
     #credits-modal p { font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; text-align: left; }
+    #fact-modal {
+      display: none; position: fixed; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 380px); z-index: 20001;
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      padding: 18px 16px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    }
+    #fact-modal.show { display: block; }
+    #fact-modal h2 { font-size: 1rem; color: #fbbf24; margin-bottom: 10px; }
+    #fact-modal p { font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; text-align: left; }
     #top-bar {
       display: none; background: #1e293b; padding: 8px 16px;
       border-bottom: 1px solid #334155; align-items: center; justify-content: space-between;
@@ -107,6 +117,7 @@
     .recap-row:last-child { border-bottom: none; }
     .recap-num { color: #7dd3fc; font-weight: 700; width: 14px; flex-shrink: 0; }
     .recap-name { flex: 1; color: #e2e8f0; min-width: 0; }
+    .recap-name.has-fact { color: #fbbf24; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
     .recap-meta { text-align: right; flex-shrink: 0; }
     .recap-pts { color: #38bdf8; font-weight: 700; white-space: nowrap; display: block; }
     .recap-dist { color: #94a3b8; font-size: 0.7rem; white-space: nowrap; }
@@ -146,6 +157,11 @@
     <h2>About</h2>
     <p>This game was created by Kyle Hunt (a Lahaina native) with help from xAI’s Grok for the coding. It was inspired by the game Maptap. Special thanks to Kerek Franz and Chris Brown of Lahaina who helped make it more accurate.</p>
     <button id="credits-close" class="btn btn-secondary" style="margin-top:14px;">Close</button>
+  </div>
+  <div id="fact-modal">
+    <h2 id="fact-title"></h2>
+    <p id="fact-body"></p>
+    <button id="fact-close" class="btn btn-secondary" style="margin-top:14px;">Close</button>
   </div>
 
   <div id="status">Loading today’s challenge…</div>
@@ -194,31 +210,31 @@
     const SHARE_DISPLAY = 'moonmassdriver.github.io/LT';
     const STORAGE_KEY = 'lahainatap_daily_v4';
     const LOCATIONS = [
-      {"name": "Banyan Tree Park", "lat": 20.8717945, "lon": -156.6776723},
-      {"name": "Old Lahaina Courthouse", "lat": 20.8716591, "lon": -156.6778824},
-      {"name": "Pioneer Inn", "lat": 20.8723208, "lon": -156.6780227},
-      {"name": "Baldwin Home Museum", "lat": 20.8732623, "lon": -156.6779163},
-      {"name": "Wo Hing Museum", "lat": 20.8763365, "lon": -156.6805351},
-      {"name": "Hale Paahao (Old Prison)", "lat": 20.872, "lon": -156.6748},
+      {"name": "Banyan Tree Park", "lat": 20.8717945, "lon": -156.6776723, "facts": "Planted April 24, 1873 by Sheriff William Owen Smith. An 8-foot gift from India marking 50 years of the Protestant mission; it grew into the largest banyan in the United States."},
+      {"name": "Old Lahaina Courthouse", "lat": 20.8716591, "lon": -156.6778824, "facts": "Built 1859–60 on the site of the old Lahaina Fort. In 1898 the Hawaiian flag came down here and the U.S. flag went up after annexation."},
+      {"name": "Pioneer Inn", "lat": 20.8723208, "lon": -156.6780227, "facts": "Opened 1901 by George Freeland — West Maui’s first real hotel. Jack London stayed here; it anchored the harbor until 2023."},
+      {"name": "Baldwin Home Museum", "lat": 20.8732623, "lon": -156.6779163, "facts": "Built 1834–35 of coral and lava. Oldest house on Maui; missionary-physician Dwight Baldwin later used it as a base for the 1853 smallpox vaccinations that spared much of the island."},
+      {"name": "Wo Hing Museum", "lat": 20.8763365, "lon": -156.6805351, "facts": "Wo Hing Society hall built 1910–12 as a meeting place and temple for Lahaina’s Chinese community. Upstairs was the altar room."},
+      {"name": "Hale Paahao (Old Prison)", "lat": 20.872, "lon": -156.6748, "facts": "“Stuck-in-irons house,” built in the 1850s from coral blocks salvaged from the demolished waterfront fort. Mostly held sailors who overstayed leave."},
       {"name": "Hauola Stone", "lat": 20.8726449, "lon": -156.6788694, "facts": "The Hauola Stone (Pōhaku o Hauola) in Lahaina, Maui, is a sacred, chair-shaped lava rock located where sea and freshwater meet. Dating back to the 14th century, ancient Hawaiian royalty used it as a sacred birthing stone and a site for healing baths."},
       {"name": "Mokuula historic site", "lat": 20.8688421, "lon": -156.674493, "facts": "Mokuʻula is a one-acre historic island located in Lahaina, Maui, Hawaii, that served as the royal residence of King Kamehameha III in the 19th century. Between 1914 and 1918, the pond was completely filled in. Today, Mokuʻula lies entirely buried beneath a baseball field and parking lot at Maluʻulu o Lele Park."},
       {"name": "Brick Palace site", "lat": 20.872629, "lon": -156.6786754, "facts": "The Brick Palace in Lahaina was the first Western-style building in the Hawaiian Islands, built for King Kamehameha the Great around 1798 to 1802."},
-      {"name": "Lahaina Lighthouse", "lat": 20.8721854, "lon": -156.6786352},
-      {"name": "Masters Reading Room", "lat": 20.8733684, "lon": -156.6779459},
-      {"name": "U.S. Seamen Hospital site", "lat": 20.879632, "lon": -156.6831315},
-      {"name": "Holy Innocents Episcopal Church", "lat": 20.8695715, "lon": -156.6763991},
-      {"name": "Maria Lanakila Catholic Church", "lat": 20.8751352, "lon": -156.6763937},
-      {"name": "Waiola Church", "lat": 20.8694654, "lon": -156.6733217},
-      {"name": "Waiola Cemetery", "lat": 20.8691521, "lon": -156.6731179},
-      {"name": "Lahaina Jodo Mission", "lat": 20.8827328, "lon": -156.6874033},
+      {"name": "Lahaina Lighthouse", "lat": 20.8721854, "lon": -156.6786352, "facts": "First lighthouse in the Hawaiian Islands (1840), built for whaling ships in the roadstead. The 9-foot original was replaced by today’s taller tower in 1905."},
+      {"name": "Masters Reading Room", "lat": 20.8733684, "lon": -156.6779459, "facts": "The Masters Reading Room in Lahaina is a historic two-story stone and frame building completed in 1834 as a safe, alcohol-free retreat and meeting place for visiting whaling ship captains, or \"masters\"."},
+      {"name": "U.S. Seamen Hospital site", "lat": 20.879632, "lon": -156.6831315, "facts": "Two-story stone house commissioned by Kamehameha III in 1833 as an inn; the U.S. leased it in 1844 as a hospital for sick whalers."},
+      {"name": "Holy Innocents Episcopal Church", "lat": 20.8695715, "lon": -156.6763991, "facts": "Front Street church built 1927. Sliding walls open the nave to the trade winds; stained glass came from an 1872 church that stood across the street."},
+      {"name": "Maria Lanakila Catholic Church", "lat": 20.8751352, "lon": -156.6763937, "facts": "First Catholic Mass on Maui was nearby in 1841. A church has stood here since 1846; the current building (1928) sits on the 1858 foundation."},
+      {"name": "Waiola Church", "lat": 20.8694654, "lon": -156.6733217, "facts": "Mission station from 1823. First stone church dedicated 1832 as Waineʻe; rebuilt and renamed Waiola (“living water”) in 1953 after winds and fires took earlier buildings."},
+      {"name": "Waiola Cemetery", "lat": 20.8691521, "lon": -156.6731179, "facts": "Dating to 1823. Burial ground of Hawaiian royalty, including Queen Keōpūolani, who invited the first Protestant mission to Maui."},
+      {"name": "Lahaina Jodo Mission", "lat": 20.8827328, "lon": -156.6874033, "facts": "Japanese Buddhist mission. The large bronze Amida Buddha on the point was dedicated in 1968 for the centennial of Japanese immigration to Hawaiʻi."},
       {"name": "Front St / Hotel St", "lat": 20.8724021, "lon": -156.6775831},
       {"name": "Front St / Dickenson St", "lat": 20.8733862, "lon": -156.6781795},
       {"name": "Front St / Prison St", "lat": 20.870875, "lon": -156.6765755},
       {"name": "Lahainaluna Rd / Wainee St", "lat": 20.8765386, "lon": -156.6780961},
-      {"name": "Lahaina Harbor", "lat": 20.8708, "lon": -156.6783},
-      {"name": "Kamehameha Iki Park", "lat": 20.8687611, "lon": -156.6760504},
+      {"name": "Lahaina Harbor", "lat": 20.8708, "lon": -156.6783, "facts": "The modern small-boat harbor was dredged in 1955 out of the old beach in front of town. Before that, ships anchored in the open roadstead."},
+      {"name": "Kamehameha Iki Park", "lat": 20.8687611, "lon": -156.6760504, "facts": "Shorefront park on the site of royal compounds and later King Kamehameha III School. Named for Kamehameha II (Liholiho), also called Kamehameha Iki."},
       {"name": "Feast at Lele", "lat": 20.8676993, "lon": -156.6758278},
-      {"name": "Lahaina Shores Beach Resort", "lat": 20.8672916, "lon": -156.6751108},
+      {"name": "Lahaina Shores Beach Resort", "lat": 20.8672916, "lon": -156.6751108, "facts": "1974 mid-rise on the sand at the south end of town — long the only real high-rise on Front Street."},
       {"name": "505 Front Street", "lat": 20.86798, "lon": -156.6755748},
       {"name": "Puamana Beach Park", "lat": 20.8551, "lon": -156.6635},
       {"name": "Launiupoko Beach Park", "lat": 20.8430473, "lon": -156.6528851},
@@ -226,14 +242,14 @@
       {"name": "Lahaina Recreation Center", "lat": 20.8677912, "lon": -156.6695201},
       {"name": "Lahaina Yacht Club", "lat": 20.8757509, "lon": -156.6804653},
       {"name": "Lahaina Public Library (old)", "lat": 20.8727727, "lon": -156.6782087},
-      {"name": "Pioneer Mill smokestack", "lat": 20.8785143, "lon": -156.6764608},
+      {"name": "Pioneer Mill smokestack", "lat": 20.8785143, "lon": -156.6764608, "facts": "Pioneer Mill opened 1860. The 225-foot stack went up in 1928 — tallest in Hawaiʻi — and was the landmark left standing after the mill closed in 1999."},
       {"name": "Prison St / Wainee St", "lat": 20.8718847, "lon": -156.6744053},
       {"name": "Prison St / Luakini St", "lat": 20.8713617, "lon": -156.6755632},
       {"name": "Front St / Shaw St", "lat": 20.8679925, "lon": -156.6750312},
       {"name": "Front St / Baker St", "lat": 20.879018, "lon": -156.6829437},
       {"name": "Honoapiilani Hwy / Shaw St", "lat": 20.8689474, "lon": -156.6718993},
       {"name": "Honoapiilani Hwy / Prison St", "lat": 20.8723475, "lon": -156.6733003},
-      {"name": "Malu Ulu o Lele Park", "lat": 20.8691847, "lon": -156.6745377},
+      {"name": "Malu Ulu o Lele Park", "lat": 20.8691847, "lon": -156.6745377, "facts": "Built over the filled fishpond and Mokuʻula island. The name means “shelter of the breadfruit of Lele,” an old name for Lahaina."},
       {"name": "Lahaina Cannery Mall", "lat": 20.886166, "lon": -156.68414},
       {"name": "Old Lahaina Luau", "lat": 20.886034, "lon": -156.6853219},
       {"name": "Mala Wharf", "lat": 20.8851611, "lon": -156.6869965, "facts": "Opened in 1922 as a working shipping facility for agriculture, the Mala Wharf pier mostly destroyed by the waves of Hurricane Iniki in 1992. It is now a popular snorkeling spot."},
@@ -253,7 +269,7 @@
       {"name": "Honoapiilani Hwy / Kapunakea St", "lat": 20.8875109, "lon": -156.6831189},
       {"name": "Lahainaluna Rd / Honoapiilani Hwy", "lat": 20.8774768, "lon": -156.677016},
       {"name": "Mill Street / Lahainaluna Rd", "lat": 20.878059, "lon": -156.6762865},
-      {"name": "Lahaina Hongwanji Mission hall", "lat": 20.870736, "lon": -156.6737911},
+      {"name": "Lahaina Hongwanji Mission hall", "lat": 20.870736, "lon": -156.6737911, "facts": "Japanese Hongwanji Buddhist mission serving plantation families; the hall was a community and funeral center for generations of West Maui Japanese."},
       {"name": "Lahaina Civic Center", "lat": 20.9050431, "lon": -156.6837448},
       {"name": "Wahikuli Wayside Park", "lat": 20.8996993, "lon": -156.6849715},
       {"name": "Princess Nahienaena Elementary", "lat": 20.8886519, "lon": -156.6638374},
@@ -273,7 +289,7 @@
       {"name": "The Westin Maui Resort", "lat": 20.9198725, "lon": -156.6950655},
       {"name": "Kaanapali Beach Hotel", "lat": 20.9242552, "lon": -156.6937709},
       {"name": "Whalers Village", "lat": 20.9214, "lon": -156.6949},
-      {"name": "The Whaler on Kaanapali Beach", "lat": 20.9225348, "lon": -156.6946471},
+      {"name": "The Whaler on Kaanapali Beach", "lat": 20.9225348, "lon": -156.6946471, "facts": "Twin oceanfront towers built 1974–76, 360 units, next door to Whalers Village."},
       {"name": "Maui Eldorado Kaanapali", "lat": 20.927826, "lon": -156.6911316},
       {"name": "Kaanapali Beach Walk (mid)", "lat": 20.9174723, "lon": -156.6964263},
       {"name": "Hula Grill Kaanapali", "lat": 20.9217749, "lon": -156.6954714},
@@ -285,7 +301,7 @@
       {"name": "Whalers Village parking garage", "lat": 20.9223227, "lon": -156.6939944},
       {"name": "Hyatt Swan Court / lagoon", "lat": 20.9122383, "lon": -156.691829},
       {"name": "Sheraton Maui Resort", "lat": 20.9265901, "lon": -156.6945022},
-      {"name": "Black Rock (Puu Kekaa)", "lat": 20.9266, "lon": -156.6968},
+      {"name": "Black Rock (Puu Kekaa)", "lat": 20.9266, "lon": -156.6968, "facts": "Sacred leina a ka ʻuhane — a leaping-off point where souls of the dead were said to jump into the next world. Also the Sheraton’s famous snorkel cove."},
       {"name": "Kahekili Beach Park", "lat": 20.9367646, "lon": -156.6922617},
       {"name": "Royal Lahaina Resort", "lat": 20.9317442, "lon": -156.6923797},
       {"name": "Honua Kai Resort", "lat": 20.9440994, "lon": -156.6908133},
@@ -334,7 +350,7 @@
       {"name": "Lower Honoapiilani Rd / Office Rd", "lat": 21.0030713, "lon": -156.65625},
       {"name": "Kahana Pump station area", "lat": 20.9763694, "lon": -156.6769972},
       {"name": "Napili Bay", "lat": 20.9958553, "lon": -156.6672188},
-      {"name": "Napili Kai Beach Resort", "lat": 20.9970089, "lon": -156.6656184},
+      {"name": "Napili Kai Beach Resort", "lat": 20.9970089, "lon": -156.6656184, "facts": "First hotel north of Kāʻanapali. Construction started 1960; first 12 units opened 1962. Height here was later capped at “a coconut tree.”"},
       {"name": "Napili Plaza", "lat": 20.9849219, "lon": -156.667074},
       {"name": "Napili Shores", "lat": 20.9930657, "lon": -156.6676784},
       {"name": "The Mauian on Napili Bay", "lat": 20.9955147, "lon": -156.6656166},
@@ -364,7 +380,7 @@
       {"name": "Olowalu General Store", "lat": 20.811423, "lon": -156.6220397},
       {"name": "Olowalu Beach", "lat": 20.8094339, "lon": -156.6147673},
       {"name": "Ukumehame Beach Park", "lat": 20.7946906, "lon": -156.581955},
-      {"name": "Puamana Condominiums", "lat": 20.8581534, "lon": -156.6663158},
+      {"name": "Puamana Condominiums", "lat": 20.8581534, "lon": -156.6663158, "facts": "Gated low-rise community at the south entrance to Lahaina, converted from an older beach estate into condos in the late 1960s."},
       {"name": "The Wharf Cinema Center", "lat": 20.8725664, "lon": -156.6768569},
       {"name": "Fleetwood's on Front St", "lat": 20.8743383, "lon": -156.678713},
       {"name": "Kimo's", "lat": 20.8760099, "lon": -156.6805986},
@@ -376,13 +392,13 @@
       {"name": "Ace Hardware Lahaina", "lat": 20.8866079, "lon": -156.6822723},
       {"name": "Walgreens Lahaina", "lat": 20.884345, "lon": -156.6809553},
       {"name": "McDonald's Lahaina", "lat": 20.8778402, "lon": -156.6793594},
-      {"name": "Hale Pai Print Shop", "lat": 20.8899233, "lon": -156.659807},
-      {"name": "Lahaina Sugar Cane Train Depot", "lat": 20.8803796, "lon": -156.6794202},
+      {"name": "Hale Pai Print Shop", "lat": 20.8899233, "lon": -156.659807, "facts": "1834 print shop at Lahainaluna. Produced Ka Lama Hawaii, the first newspaper printed in the Hawaiian Islands."},
+      {"name": "Lahaina Sugar Cane Train Depot", "lat": 20.8803796, "lon": -156.6794202, "facts": "Depot for the tourist railroad that ran the old Pioneer Mill right-of-way from 1970 until service ended in the 2010s."},
       {"name": "Front St / Papalaua St", "lat": 20.8771084, "lon": -156.6812539},
       {"name": "Wainee St / Dickenson St", "lat": 20.8746891, "lon": -156.6765913},
       {"name": "Maui Medical Group Lahaina", "lat": 20.8710192, "lon": -156.6756061},
       {"name": "Sacred Hearts School", "lat": 20.8756, "lon": -156.676},
-      {"name": "Kaanapali Alii", "lat": 20.9183642, "lon": -156.6956466},
+      {"name": "Kaanapali Alii", "lat": 20.9183642, "lon": -156.6956466, "facts": "1982 luxury beachfront condo-hotel, 264 one- and two-bedroom apartments on the sand at Nohea Kai."},
       {"name": "Westin Nanea Ocean Villas", "lat": 20.9425346, "lon": -156.6908848},
       {"name": "Mahana at Kaanapali", "lat": 20.9466711, "lon": -156.6918862},
       {"name": "Kaanapali Royal", "lat": 20.9221874, "lon": -156.6906595},
@@ -398,7 +414,7 @@
       {"name": "Maui Preparatory Academy", "lat": 20.9825812, "lon": -156.6685975},
       {"name": "Sea House Restaurant", "lat": 20.9967, "lon": -156.6659224},
       {"name": "Napili Market", "lat": 20.9850204, "lon": -156.6675541},
-      {"name": "Honolua Store", "lat": 20.9988135, "lon": -156.6545874},
+      {"name": "Honolua Store", "lat": 20.9988135, "lon": -156.6545874, "facts": "1929 Honolua Ranch / Baldwin Packers plantation store. Classic green plantation-era shop at the edge of Kapalua."},
       {"name": "Merriman's Kapalua", "lat": 20.998422, "lon": -156.6671777},
       {"name": "Sansei Seafood Kapalua", "lat": 20.9984137, "lon": -156.6543961},
       {"name": "The Burger Shack Kapalua", "lat": 21.0042405, "lon": -156.6519508},
@@ -408,7 +424,7 @@
       {"name": "Punalau Beach (Windmills)", "lat": 21.022148, "lon": -156.6255534},
       {"name": "Honokohau Bay", "lat": 21.0219777, "lon": -156.6098285},
       {"name": "Kuhua Camp", "lat": 20.88094016953892, "lon": -156.67553901672363, "facts": "Kuhua Camp (also known as Mill Camp) was a historic, densely populated residential neighborhood in Lahaina, Maui, built in the 1920s as housing for sugar plantation workers."},
-      {"name": "Villages of Leialii", "lat": 20.900846909602084, "lon": -156.6819262504578},
+      {"name": "Villages of Leialii", "lat": 20.900846909602084, "lon": -156.6819262504578, "facts": "State / DHHL housing project mauka of Honoapiʻilani north of town. Built in phases from the 1990s as homestead and affordable lots."},
       {"name": "Kahoma Village", "lat": 20.882777928167073, "lon": -156.68366789817813},
       {"name": "Hale Mahaolu Eono", "lat": 20.88142300102918, "lon": -156.67140126228335, "facts": "Hale Mahaolu Eono was a low-income senior housing community in Lahaina that provided affordable independent living for the local elderly (Kupuna)."},
       {"name": "Lahaina Roads", "lat": 20.890719292884487, "lon": -156.68515473604202, "facts": "Lāhainā Roads Condo is a low-rise, oceanfront condo offering direct sunset views and proximity to the northern end of Front Street. Built in 1969, the property survived the August 2023 Lahaina wildfire and reopened following full repairs and renovations in June 2025."},
@@ -429,8 +445,8 @@
       {"name": "Kenui St / Honoapiilani Hwy", "lat": 20.882375293882287, "lon": -156.68161690235138},
       {"name": "Leialii Pkwy (mid)", "lat": 20.901646231361415, "lon": -156.68221771717072},
       {"name": "Kai Hele Ku / Honoapiilani Hwy", "lat": 20.843285395601374, "lon": -156.6524684429169},
-      {"name": "International Colony Club", "lat": 20.934329580000636, "lon": -156.68917894363406},
-      {"name": "Kaanapali Plantation", "lat": 20.933811846472047, "lon": -156.6861999034882},
+      {"name": "International Colony Club", "lat": 20.934329580000636, "lon": -156.68917894363406, "facts": "One of Kāʻanapali’s oldest condo projects: 44 cottages on 10 acres, built in the 1960s, still one house per building."},
+      {"name": "Kaanapali Plantation", "lat": 20.933811846472047, "lon": -156.6861999034882, "facts": "1970 hillside condo — 62 units in 15 buildings, set back from the beach above the Royal Course."},
       {"name": "Maui Sands Honokowai", "lat": 20.952275455715977, "lon": -156.68760180473328},
       {"name": "Hale Maui Apartment Hotel", "lat": 20.95609781961036, "lon": -156.6856750845909},
       {"name": "Polynesian Shores", "lat": 20.963201245657345, "lon": -156.68339073657992},
@@ -664,13 +680,30 @@
       lastSharePlain = sharePayload(scores);
       el.textContent = lastSharePlain;
     }
+    function factForName(name) {
+      for (let i = 0; i < LOCATIONS.length; i++) {
+        if (LOCATIONS[i].name === name && LOCATIONS[i].facts) return LOCATIONS[i].facts;
+      }
+      return '';
+    }
+    function openFact(name) {
+      const f = factForName(name);
+      if (!f) return;
+      document.getElementById('fact-title').textContent = name;
+      document.getElementById('fact-body').textContent = f;
+      document.getElementById('fact-modal').classList.add('show');
+      document.getElementById('credits-backdrop').classList.add('show');
+    }
     function recapHtml(names, scores, guesses) {
       let html = '';
       for (let i = 0; i < 5; i++) {
         const g = guesses && guesses[i];
         const dist = (g && g.meters != null) ? formatDistance(g.meters) : '';
+        const has = !!factForName(names[i]);
         html += '<div class="recap-row"><span class="recap-num">' + (i + 1) + '</span>' +
-          '<span class="recap-name">' + (names[i] || '') + '</span>' +
+          '<span class="recap-name' + (has ? ' has-fact' : '') + '"' +
+          (has ? ' data-name="' + (names[i] || '').replace(/"/g, '&quot;') + '"' : '') +
+          '>' + (names[i] || '') + '</span>' +
           '<span class="recap-meta"><span class="recap-pts">' + scores[i] + '</span>' +
           (dist ? '<span class="recap-dist">' + dist + '</span>' : '') +
           '</span></div>';
@@ -733,7 +766,10 @@
         const g = guesses[i];
         if (!loc) continue;
         const tLatLng = L.latLng(loc.lat, loc.lon);
-        L.marker(tLatLng, { icon: numberedIcon('#f59e0b', i + 1), zIndexOffset: 400 }).addTo(reviewLayer);
+        const gold = L.marker(tLatLng, { icon: numberedIcon('#f59e0b', i + 1), zIndexOffset: 400 }).addTo(reviewLayer);
+        if (loc.facts) {
+          gold.on('click', function() { openFact(loc.name); });
+        }
         pts.push(tLatLng);
         if (g && g.lat != null) {
           const gLatLng = L.latLng(g.lat, g.lng);
@@ -905,12 +941,20 @@
     document.getElementById('locked-copy').onclick = function() { copyShare(this); };
     (function() {
       const modal = document.getElementById('credits-modal');
+      const fact = document.getElementById('fact-modal');
       const back = document.getElementById('credits-backdrop');
-      function openCredits() { modal.classList.add('show'); back.classList.add('show'); }
-      function closeCredits() { modal.classList.remove('show'); back.classList.remove('show'); }
+      function openCredits() { fact.classList.remove('show'); modal.classList.add('show'); back.classList.add('show'); }
+      function closeOverlays() { modal.classList.remove('show'); fact.classList.remove('show'); back.classList.remove('show'); }
       document.getElementById('info-btn').onclick = openCredits;
-      document.getElementById('credits-close').onclick = closeCredits;
-      back.onclick = closeCredits;
+      document.getElementById('credits-close').onclick = closeOverlays;
+      document.getElementById('fact-close').onclick = closeOverlays;
+      back.onclick = closeOverlays;
+      function onRecapClick(e) {
+        const el = e.target.closest('.recap-name.has-fact');
+        if (el && el.getAttribute('data-name')) openFact(el.getAttribute('data-name'));
+      }
+      document.getElementById('recap-list').addEventListener('click', onRecapClick);
+      document.getElementById('locked-list').addEventListener('click', onRecapClick);
     })();
     document.body.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
     document.body.addEventListener('click', unlockAudio, { once: true });
