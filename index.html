@@ -581,13 +581,60 @@
       }
       return 0;
     }
+    function pickMsg(total, list) {
+      const rng = mulberry32(hashString('msg|' + today + '|' + total));
+      return list[Math.floor(rng() * list.length)];
+    }
     function scoreMessage(total) {
-      if (total >= 1000) return 'Perfect!';
-      if (total >= 950) return 'Outstanding!';
-      if (total >= 850) return 'Great Job!';
-      if (total >= 700) return 'Nice work!';
-      if (total >= 500) return 'Not bad!';
-      return 'Better luck tomorrow!';
+      if (total >= 1000) return pickMsg(total, [
+        'Cheehooooo!!!!!',
+        'Yessah!!',
+        'You found the islands with your eyes closed.',
+        'The banyan just high-fived you.',
+        'GPS called. It wants your job.'
+      ]);
+      if (total >= 950) return pickMsg(total, [
+        'You da kine, brah!!',
+        'Ho brah, you smaht!',
+        'Cheehooooo!!!!!',
+        'The pigeons of Front Street are taking notes.',
+        'Even the trade winds paused to clap.'
+      ]);
+      if (total >= 850) return pickMsg(total, [
+        'Yessah!!',
+        'You da kine, brah!!',
+        'Ho brah, you smaht!',
+        'Almost made the mongoose jealous.',
+        'That was sneakily local of you.'
+      ]);
+      if (total >= 700) return pickMsg(total, [
+        'Not bad for a tourist with a good memory.',
+        'The cane train would have stopped for you.',
+        'Close enough that the chickens nodded.',
+        'You got the vibe. The vibe high-fived back.',
+        'Solid. The lighthouse approves.'
+      ]);
+      if (total >= 500) return pickMsg(total, [
+        'You found West Maui… as a concept.',
+        'Somewhere a gecko is politely confused.',
+        'Halfway to legend, halfway to Kahului.',
+        'The map is proud. A little tired. Proud.',
+        'Respectable wandering. Come back tomorrow.'
+      ]);
+      if (total >= 300) return pickMsg(total, [
+        'You tapped the ocean with confidence.',
+        'Bold strategy. The fish remain unbothered.',
+        'Lahaina is still over there. Waiting.',
+        'That guess had main-character energy. Wrong island energy.',
+        'The goats of Lahainaluna send thoughts and prayers.'
+      ]);
+      return pickMsg(total, [
+        'Did you pin Lanai on purpose?',
+        'The roadstead has seen worse navigation.',
+        'Tomorrow the land will forgive you.',
+        'You discovered a new ahupuaʻa called “Oops.”',
+        'Cheehooooo… from very far away.'
+      ]);
     }
     function formatDistance(meters) {
       const feet = meters * 3.28084;
