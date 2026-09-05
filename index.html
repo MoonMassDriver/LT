@@ -581,60 +581,78 @@
       }
       return 0;
     }
-    function pickMsg(total, list) {
-      const rng = mulberry32(hashString('msg|' + today + '|' + total));
-      return list[Math.floor(rng() * list.length)];
+    function pickMsg(list) {
+      return list[Math.floor(Math.random() * list.length)];
     }
     function scoreMessage(total) {
-      if (total >= 1000) return pickMsg(total, [
-        'Cheehooooo!!!!!',
-        'Yessah!!',
-        'You found the islands with your eyes closed.',
-        'The banyan just high-fived you.',
-        'GPS called. It wants your job.'
-      ]);
-      if (total >= 950) return pickMsg(total, [
-        'You da kine, brah!!',
-        'Ho brah, you smaht!',
-        'Cheehooooo!!!!!',
-        'The pigeons of Front Street are taking notes.',
-        'Even the trade winds paused to clap.'
-      ]);
-      if (total >= 850) return pickMsg(total, [
-        'Yessah!!',
-        'You da kine, brah!!',
-        'Ho brah, you smaht!',
-        'Almost made the mongoose jealous.',
-        'That was sneakily local of you.'
-      ]);
-      if (total >= 700) return pickMsg(total, [
-        'Not bad for a tourist with a good memory.',
-        'The cane train would have stopped for you.',
-        'Close enough that the chickens nodded.',
-        'You got the vibe. The vibe high-fived back.',
-        'Solid. The lighthouse approves.'
-      ]);
-      if (total >= 500) return pickMsg(total, [
-        'You found West Maui… as a concept.',
-        'Somewhere a gecko is politely confused.',
-        'Halfway to legend, halfway to Kahului.',
-        'The map is proud. A little tired. Proud.',
-        'Respectable wandering. Come back tomorrow.'
-      ]);
-      if (total >= 300) return pickMsg(total, [
-        'You tapped the ocean with confidence.',
-        'Bold strategy. The fish remain unbothered.',
-        'Lahaina is still over there. Waiting.',
+      const perfect = [
+        'Cheehooooo!!!!!', 'Yessah!!', 'Cherreh.', 'Yeah you!', 'Perfectly splendid!',
+        'So hammah, you!', 'I like know how you so smaht.', 'You da kine, brah!!',
+        'The banyan just high-fived you.', 'GPS called. It wants your job.',
+        'You found the islands with your eyes closed.', 'Even the trade winds paused to clap.',
+        'The lighthouse winked first.', 'Cartographers are taking a sick day.',
+        'That was illegally accurate.', 'West Maui just stood up slowly and clapped.',
+        'You could teach the tide where to go.', '1000/1000. The chickens bow.',
+        'No notes. Only awe.', 'The roadstead filed a compliment.'
+      ];
+      const high = [
+        'You da kine, brah!!', 'Ho brah, you smaht!', 'Cheehooooo!!!!!', 'Yessah!!',
+        'So hammah, you!', 'Cherreh.', 'Yeah you!', 'I like know how you so smaht.',
+        'Perfectly splendid!', 'The pigeons of Front Street are taking notes.',
+        'Almost made the mongoose jealous.', 'That was sneakily local of you.',
+        'The cane train would have stopped for you.', 'Solid. The lighthouse approves.',
+        'You got the vibe. The vibe high-fived back.', 'Close enough that the chickens nodded.',
+        'Your finger has union papers now.', 'The reef said ok we see you.',
+        'Somebody call the almanac.', 'You could find a plate lunch in a blackout.',
+        'Mildly supernatural, even.', 'Aunty would allow this score.',
+        'Pretty ono navigating.', 'The bypass is jealous of that aim.',
+        'Good enough to brag at Foodland.', 'The smokestack tips its cap.'
+      ];
+      const midHigh = [
+        'Yessah!!', 'Yeah you!', 'Cherreh.', 'Ho brah, you smaht!',
+        'Not bad for a tourist with a good memory.', 'You know these roads in your bones.',
+        'You almost made it look easy.', 'That will play in Kahana.',
+        'Respectable local-kine guessing.', 'The honu nodded once, slowly.',
+        'A strong showing from the cheap seats.', 'Your inner kupuna is proud-ish.',
+        'Not perfect. Loudly decent.', 'The tide chart gives you a B+.',
+        'You and West Maui are talking again.', 'Nice. No need make big fuss. Nice.',
+        'Would survive a family group chat.', 'The sugar mill ghosts approve, mostly.',
+        'You found most of the plot.', 'Keep this, maybe flex tomorrow.'
+      ];
+      const mid = [
+        'The map is proud. A little tired. Proud.', 'You found West Maui as a concept.',
+        'Halfway to legend, halfway to Kahului.', 'Somewhere a gecko is politely confused.',
+        'Respectable wandering. Come back tomorrow.', 'Not lost. Just interpretive.',
+        'The chickens remain uncommitted.', 'You brushed the right neighborhood.',
+        'A solid B-minus from the trade winds.', 'Could have been worse. Was not poetry either.',
+        'You and the pin almost had a moment.', 'Decent. The mongoose shrugs.',
+        'Keep this energy, tighten the aim.', 'Lahaina noticed you. Barely. Fondly.',
+        'A participation coconut has been issued.', 'You circled the truth like a cautious bee.',
+        'Warm. Getting warmer. Still wearing a jacket.', 'The score is a shrug with aloha.',
+        'Not hamajang. Not legendary. Soup temperature.', 'Tomorrow the streets may forgive the aim.'
+      ];
+      const low = [
+        'Ho nah!', 'Aye sus, you!', 'Ooof bettah luck nex time, auntie.',
+        'Sorry but your score stay hamajangz.', 'I stay sorry for you.',
+        'You tapped the ocean with confidence.', 'Bold strategy. The fish remain unbothered.',
+        'Lahaina is still over there. Waiting.', 'The goats of Lahainaluna send thoughts and prayers.',
         'That guess had main-character energy. Wrong island energy.',
-        'The goats of Lahainaluna send thoughts and prayers.'
-      ]);
-      return pickMsg(total, [
-        'Did you pin Lanai on purpose?',
-        'The roadstead has seen worse navigation.',
-        'Tomorrow the land will forgive you.',
-        'You discovered a new ahupuaʻa called “Oops.”',
-        'Cheehooooo… from very far away.'
-      ]);
+        'Did you pin Lanai on purpose?', 'The roadstead has seen worse navigation.',
+        'Tomorrow the land will forgive you.', 'You discovered a new ahupuaa called Oops.',
+        'Cheehooooo from very far away.', 'The pin went on vacation without you.',
+        'Somewhere Molokai just got a notification.', 'Your compass is on island time.',
+        'We still like you. The score is another matter.', 'Try look one more time... yesterday.',
+        'That was a scenic route through the atmosphere.', 'Auntie packed a lunch for this journey.',
+        'The satellite asked if you were kidding.', 'Close. If close meant another zip code.',
+        'Your inner tourist won today.', 'Even Baby Beach said who dat?',
+        'The pin applied for witness protection.', 'You mapped a feeling, not a street.',
+        'Bold taps. Mysterious destinations.', 'Come back. Bring the other finger.'
+      ];
+      if (total >= 1000) return pickMsg(perfect);
+      if (total >= 900) return pickMsg(high);
+      if (total >= 750) return pickMsg(midHigh);
+      if (total >= 500) return pickMsg(mid);
+      return pickMsg(low);
     }
     function formatDistance(meters) {
       const feet = meters * 3.28084;
