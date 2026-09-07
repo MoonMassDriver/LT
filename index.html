@@ -208,7 +208,7 @@
   <script>
     const SHARE_URL = 'https://moonmassdriver.github.io/LT';
     const SHARE_DISPLAY = 'moonmassdriver.github.io/LT';
-    const STORAGE_KEY = 'lahainatap_daily_v4';
+    const STORAGE_KEY = 'lahainatap_daily_v5';
     const LOCATIONS = [
       {"name": "Banyan Tree Park", "lat": 20.8717945, "lon": -156.6776723, "facts": "Planted April 24, 1873 by Sheriff William Owen Smith. An 8-foot gift from India marking 50 years of the Protestant mission; it grew into the largest banyan in the United States."},
       {"name": "Old Lahaina Courthouse", "lat": 20.8716591, "lon": -156.6778824, "facts": "Built 1859–60 on the site of the old Lahaina Fort. In 1898 the Hawaiian flag came down here and the U.S. flag went up after annexation."},
@@ -514,7 +514,22 @@
       {"name": "Kumukahi St / Hokeo St", "lat": 20.884578074474426, "lon": -156.6666546463967},
       {"name": "Kauaula Rd / Front St", "lat": 20.865260668296138, "lon": -156.67303740978244},
       {"name": "Kamano Pl / Kahili Pl", "lat": 20.865095251655823, "lon": -156.6715183854103},
-      {"name": "Aulike St / Leoleo St", "lat": 20.86581623295265, "lon": -156.66925638914114}
+      {"name": "Aulike St / Leoleo St", "lat": 20.86581623295265, "lon": -156.66925638914114},
+      {"name": "Times Supermarket", "lat": 20.94727901631787, "lon": -156.68761610984805},
+      {"name": "Lanikeha Gated Community", "lat": 20.91623456681015, "lon": -156.68377518653872},
+      {"name": "Maui Police Department - Lahaina Station", "lat": 20.904678937987796, "lon": -156.6844600439072},
+      {"name": "Honoapiilani Hwy / Hinau St", "lat": 20.88153493751981, "lon": -156.68089002370837},
+      {"name": "Lower Honoapiilani Rd / Piina Pl", "lat": 20.967551802273015, "lon": -156.6809606552124},
+      {"name": "Napilihau Rec Center", "lat": 20.98778260633789, "lon": -156.66542261838913},
+      {"name": "Fork and Salad", "lat": 20.884825331864004, "lon": -156.68333888053897},
+      {"name": "Ipukula Way / S Nahale Place", "lat": 20.887285353647783, "lon": -156.68140769004822},
+      {"name": "The Sugar Cane Train Bridge", "lat": 20.912878882569235, "lon": -156.68609797954562},
+      {"name": "Miss Arepas restaurant", "lat": 20.952741358506863, "lon": -156.68637514114383},
+      {"name": "Puamana Pl / Lwr Honoapiilani Rd", "lat": 20.980317212552755, "lon": -156.67443931102756},
+      {"name": "Napili Fire Station", "lat": 20.98490267641887, "lon": -156.66813433170321},
+      {"name": "Napili Ridge Condos", "lat": 20.9891624487353, "lon": -156.6651785373688},
+      {"name": "The Barn in Kapalua", "lat": 20.998031367287, "lon": -156.65485471487048},
+      {"name": "Kai Hele Ku St / Huapala Pl", "lat": 20.849908727542655, "lon": -156.63528978824618}
     ];
 
     function hawaiiToday() {
@@ -568,8 +583,9 @@
     function scoreFromMeters(m) {
       const ft = m * 3.28084;
       const curve = [
-        [0, 100], [300, 100], [600, 95], [1200, 90], [2000, 85],
-        [4000, 75], [8000, 65], [16000, 45], [32000, 25], [64000, 0]
+        [0, 100], [90, 100], [120, 99], [160, 98], [220, 97], [300, 96],
+        [400, 95], [550, 94], [700, 93], [850, 92], [1000, 91], [1200, 90],
+        [2000, 85], [4000, 75], [8000, 65], [16000, 45], [32000, 25], [64000, 0]
       ];
       if (ft <= curve[0][0]) return curve[0][1];
       if (ft >= curve[curve.length - 1][0]) return 0;
@@ -581,10 +597,15 @@
       }
       return 0;
     }
-    function pickMsg(list, total) {
-      const rng = mulberry32(hashString('msg|' + today + '|' + total));
-      return list[Math.floor(rng() * list.length)];
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+      }
+      return a;
     }
+    const DECK_KEY = 'lahainatap_msg_decks_v1';
     function scoreMessage(total) {
       const low = [
         "Ho nah!",
@@ -712,11 +733,20 @@
         "I am in awe.",
         "A Merriman's gift card has been mailed to you."
       ];
-      if (total >= 1000) return pickMsg(perfect, total);
-      if (total >= 900) return pickMsg(high, total);
-      if (total >= 750) return pickMsg(midHigh, total);
-      if (total >= 500) return pickMsg(mid, total);
-      return pickMsg(low, total);
+      let band = 'low';
+      let list = low;
+      if (total >= 1000) { band = 'perfect'; list = perfect; }
+      else if (total >= 900) { band = 'high'; list = high; }
+      else if (total >= 750) { band = 'midHigh'; list = midHigh; }
+      else if (total >= 500) { band = 'mid'; list = mid; }
+      let store = {};
+      try { store = JSON.parse(localStorage.getItem(DECK_KEY) || '{}'); } catch (e) {}
+      if (!Array.isArray(store[band]) || store[band].length === 0) {
+        store[band] = shuffle(list);
+      }
+      const msg = store[band].shift();
+      localStorage.setItem(DECK_KEY, JSON.stringify(store));
+      return msg;
     }
     function formatDistance(meters) {
       const feet = meters * 3.28084;
