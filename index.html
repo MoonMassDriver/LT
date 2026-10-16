@@ -1,1 +1,1132 @@
-PLACEHOLDER_FOR_FULL_CONTENT
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LahainaTap</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh; height: 100%; display: flex; flex-direction: column;
+      overscroll-behavior: none;
+    }
+    body.endgame footer, body.endgame #status { display: none; }
+    body.endgame #map { flex: 0 0 28vh; min-height: 150px; max-height: 28vh; }
+    header {
+      background: #1e293b; padding: 10px 16px 8px; text-align: center;
+      border-bottom: 1px solid #334155; position: relative; z-index: 5;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; color: #38bdf8; letter-spacing: -0.02em; }
+    header p { font-size: 0.75rem; color: #94a3b8; margin-top: 1px; }
+    #info-btn {
+      position: absolute; top: 10px; right: 12px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid #475569; background: #334155; color: #e2e8f0;
+      font-size: 0.95rem; font-weight: 700; font-style: italic; cursor: pointer;
+      line-height: 1; z-index: 6;
+    }
+    #credits-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 20000;
+    }
+    #credits-backdrop.show { display: block; }
+    #credits-modal {
+      display: none; position: fixed; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 380px); z-index: 20001;
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      padding: 18px 16px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    }
+    #credits-modal.show { display: block; }
+    #credits-modal h2 { font-size: 1rem; color: #38bdf8; margin-bottom: 10px; }
+    #credits-modal p { font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; text-align: left; }
+    #fact-modal {
+      display: none; position: fixed; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 380px); z-index: 20001;
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      padding: 18px 16px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    }
+    #fact-modal.show { display: block; }
+    #fact-modal h2 { font-size: 1rem; color: #fbbf24; margin-bottom: 10px; }
+    #fact-modal p { font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; text-align: left; }
+    #top-bar {
+      display: none; background: #1e293b; padding: 8px 16px;
+      border-bottom: 1px solid #334155; align-items: center; justify-content: space-between;
+    }
+    #top-bar.show { display: flex; }
+    #running-total { font-size: 1.05rem; font-weight: 700; color: #38bdf8; }
+    #progress { display: flex; gap: 5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #334155; }
+    .dot.done { background: #22c55e; }
+    .dot.current { background: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.35); }
+    #prompt {
+      display: none; background: #1e293b; padding: 10px 16px 12px; text-align: center;
+      border-bottom: 1px solid #334155;
+    }
+    #prompt .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 3px; }
+    #address { font-size: 1.05rem; font-weight: 600; color: #f8fafc; line-height: 1.35; }
+    #map { flex: 1; min-height: 260px; width: 100%; background: #0f172a; }
+    #controls {
+      display: none; background: #1e293b;
+      padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155;
+    }
+    .btn {
+      display: block; width: 100%; padding: 14px; border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 650; cursor: pointer;
+    }
+    .btn-primary { background: #0ea5e9; color: #0f172a; }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .btn-secondary { background: #334155; color: #e2e8f0; margin-top: 8px; }
+    #round-result {
+      display: none; background: #1e293b;
+      padding: 16px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155; text-align: center;
+    }
+    #final-result, #locked {
+      display: none; background: #1e293b;
+      padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #334155; text-align: center;
+      flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+    #round-result.show, #final-result.show, #locked.show { display: block; }
+    #round-score { font-size: 1.7rem; font-weight: 800; color: #38bdf8; }
+    #round-dist { font-size: 0.9rem; color: #94a3b8; margin: 4px 0 8px; }
+    #round-facts {
+      display: none; text-align: left; background: #0f172a; border: 1px solid #334155;
+      border-radius: 10px; padding: 10px 12px; margin: 0 0 12px;
+      font-size: 0.82rem; line-height: 1.45; color: #cbd5e1;
+    }
+    #round-facts .tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #7dd3fc; margin-bottom: 4px; }
+    #total-score, #locked-score { font-size: 1.85rem; font-weight: 800; color: #38bdf8; line-height: 1; }
+    #score-breakdown { font-size: 0.85rem; color: #94a3b8; margin: 4px 0 8px; }
+    #recap-list, #locked-list {
+      text-align: left; background: #0f172a; border: 1px solid #334155;
+      border-radius: 10px; padding: 8px 10px; margin: 12px 0 8px;
+    }
+    .recap-row {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 0.82rem;
+    }
+    .recap-row:last-child { border-bottom: none; }
+    .recap-num { color: #7dd3fc; font-weight: 700; width: 14px; flex-shrink: 0; }
+    .recap-name { flex: 1; color: #e2e8f0; min-width: 0; }
+    .recap-name.has-fact { color: #fbbf24; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+    .recap-meta { text-align: right; flex-shrink: 0; }
+    .recap-pts { color: #38bdf8; font-weight: 700; white-space: nowrap; display: block; }
+    .recap-dist { color: #94a3b8; font-size: 0.7rem; white-space: nowrap; }
+    #share-box, #locked-share {
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; margin-bottom: 10px; text-align: left; line-height: 1.45;
+    }
+    #share-box a, #locked-share a { color: #7dd3fc; }
+    #status { text-align: center; padding: 8px 16px; font-size: 0.85rem; color: #94a3b8; background: #0f172a; }
+    footer { text-align: center; padding: 8px; font-size: 0.65rem; color: #64748b; background: #0f172a; }
+    #victory-banner {
+      font-size: 1rem; font-weight: 700; color: #fbbf24; margin-bottom: 4px;
+      opacity: 0; transform: scale(0.7);
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #victory-banner.show { opacity: 1; transform: scale(1); }
+    .particle {
+      position: absolute; width: 8px; height: 8px; border-radius: 2px;
+      pointer-events: none; opacity: 0.9; animation: fall 1.6s ease-out forwards;
+    }
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(180px) rotate(240deg); opacity: 0; }
+    }
+    .leaflet-control-attribution { font-size: 9px !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>LahainaTap</h1>
+    <p>West Maui daily challenge</p>
+    <button id="info-btn" type="button" aria-label="Credits">i</button>
+  </header>
+  <div id="credits-backdrop"></div>
+  <div id="credits-modal">
+    <h2>About</h2>
+    <p>This game was created by Kyle Hunt (a Lahaina native) with help from xAI’s Grok for the coding. It was inspired by the game Maptap. Special thanks to Kerek Franz and Chris Brown of Lahaina who helped make it more accurate.</p>
+    <button id="credits-close" class="btn btn-secondary" style="margin-top:14px;">Close</button>
+  </div>
+  <div id="fact-modal">
+    <h2 id="fact-title"></h2>
+    <p id="fact-body"></p>
+    <button id="fact-close" class="btn btn-secondary" style="margin-top:14px;">Close</button>
+  </div>
+
+  <div id="status">Loading today’s challenge…</div>
+  <div id="top-bar">
+    <div id="running-total">0 / 1000</div>
+    <div id="progress"></div>
+  </div>
+  <div id="prompt">
+    <div class="label">Find this location <span id="round-label"></span></div>
+    <div id="address"></div>
+  </div>
+  <div id="map"></div>
+  <div id="controls">
+    <button id="submit-btn" class="btn btn-primary" disabled>Tap the map to place your guess</button>
+  </div>
+  <div id="round-result">
+    <div id="round-score"></div>
+    <div id="round-dist"></div>
+    <div id="round-facts"><div class="tag">About this place</div><div id="round-facts-text"></div></div>
+    <button id="next-btn" class="btn btn-primary">Next</button>
+  </div>
+  <div id="final-result">
+    <div id="victory-banner">Challenge complete</div>
+    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">Final score</div>
+    <div id="total-score"></div>
+    <div id="score-breakdown"></div>
+    <div id="share-box"></div>
+    <button id="copy-btn" class="btn btn-secondary">Copy result</button>
+    <div id="recap-list"></div>
+  </div>
+  <div id="locked">
+    <div id="locked-banner" style="font-size:1.05rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">Already played today</div>
+    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">Today’s score</div>
+    <div id="locked-score" style="font-size:2.4rem;font-weight:800;color:#38bdf8;line-height:1;"></div>
+    <div id="locked-break" style="font-size:0.9rem;color:#94a3b8;margin:8px 0 10px;"></div>
+    <div id="locked-share"></div>
+    <button id="locked-copy" class="btn btn-secondary">Copy result</button>
+    <div id="locked-list"></div>
+    <p style="font-size:0.78rem;color:#94a3b8;margin-top:12px;">Come back tomorrow for a new set of five.</p>
+  </div>
+  <footer>Satellite map · no labels · same five for everyone today</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const SHARE_URL = 'https://moonmassdriver.github.io/LT';
+    const SHARE_DISPLAY = 'moonmassdriver.github.io/LT';
+    const STORAGE_KEY = 'lahainatap_daily_v5';
+    const LOCATIONS = [
+      {"name": "Banyan Tree Park", "lat": 20.8717945, "lon": -156.6776723, "facts": "Planted April 24, 1873 by Sheriff William Owen Smith. An 8-foot gift from India marking 50 years of the Protestant mission; it grew into the largest banyan in the United States."},
+      {"name": "Old Lahaina Courthouse", "lat": 20.8716591, "lon": -156.6778824, "facts": "Built 1859–60 on the site of the old Lahaina Fort. In 1898 the Hawaiian flag came down here and the U.S. flag went up after annexation."},
+      {"name": "Pioneer Inn", "lat": 20.8723208, "lon": -156.6780227, "facts": "Opened 1901 by George Freeland — West Maui’s first real hotel. Jack London stayed here; it anchored the harbor until 2023."},
+      {"name": "Baldwin Home Museum", "lat": 20.8732623, "lon": -156.6779163, "facts": "Built 1834–35 of coral and lava. Oldest house on Maui; missionary-physician Dwight Baldwin later used it as a base for the 1853 smallpox vaccinations that spared much of the island."},
+      {"name": "Wo Hing Museum", "lat": 20.8763365, "lon": -156.6805351, "facts": "Wo Hing Society hall built 1910–12 as a meeting place and temple for Lahaina’s Chinese community. Upstairs was the altar room."},
+      {"name": "Hale Paahao (Old Prison)", "lat": 20.872, "lon": -156.6748, "facts": "“Stuck-in-irons house,” built in the 1850s from coral blocks salvaged from the demolished waterfront fort. Mostly held sailors who overstayed leave."},
+      {"name": "Hauola Stone", "lat": 20.8726449, "lon": -156.6788694, "facts": "The Hauola Stone (Pōhaku o Hauola) in Lahaina, Maui, is a sacred, chair-shaped lava rock located where sea and freshwater meet. Dating back to the 14th century, ancient Hawaiian royalty used it as a sacred birthing stone and a site for healing baths."},
+      {"name": "Mokuula historic site", "lat": 20.8688421, "lon": -156.674493, "facts": "Mokuʻula is a one-acre historic island located in Lahaina, Maui, Hawaii, that served as the royal residence of King Kamehameha III in the 19th century. Between 1914 and 1918, the pond was completely filled in. Today, Mokuʻula lies entirely buried beneath a baseball field and parking lot at Maluʻulu o Lele Park."},
+      {"name": "Brick Palace site", "lat": 20.872629, "lon": -156.6786754, "facts": "The Brick Palace in Lahaina was the first Western-style building in the Hawaiian Islands, built for King Kamehameha the Great around 1798 to 1802."},
+      {"name": "Lahaina Lighthouse", "lat": 20.8721854, "lon": -156.6786352, "facts": "First lighthouse in the Hawaiian Islands (1840), built for whaling ships in the roadstead. The 9-foot original was replaced by today’s taller tower in 1905."},
+      {"name": "Masters Reading Room", "lat": 20.8733684, "lon": -156.6779459, "facts": "The Masters Reading Room in Lahaina is a historic two-story stone and frame building completed in 1834 as a safe, alcohol-free retreat and meeting place for visiting whaling ship captains, or \"masters\"."},
+      {"name": "U.S. Seamen Hospital site", "lat": 20.879632, "lon": -156.6831315, "facts": "Two-story stone house commissioned by Kamehameha III in 1833 as an inn; the U.S. leased it in 1844 as a hospital for sick whalers."},
+      {"name": "Holy Innocents Episcopal Church", "lat": 20.8695715, "lon": -156.6763991, "facts": "Front Street church built 1927. Sliding walls open the nave to the trade winds; stained glass came from an 1872 church that stood across the street."},
+      {"name": "Maria Lanakila Catholic Church", "lat": 20.8751352, "lon": -156.6763937, "facts": "First Catholic Mass on Maui was nearby in 1841. A church has stood here since 1846; the current building (1928) sits on the 1858 foundation."},
+      {"name": "Waiola Church", "lat": 20.8694654, "lon": -156.6733217, "facts": "Mission station from 1823. First stone church dedicated 1832 as Waineʻe; rebuilt and renamed Waiola (“living water”) in 1953 after winds and fires took earlier buildings."},
+      {"name": "Waiola Cemetery", "lat": 20.8691521, "lon": -156.6731179, "facts": "Dating to 1823. Burial ground of Hawaiian royalty, including Queen Keōpūolani, who invited the first Protestant mission to Maui."},
+      {"name": "Lahaina Jodo Mission", "lat": 20.8827328, "lon": -156.6874033, "facts": "Japanese Buddhist mission. The large bronze Amida Buddha on the point was dedicated in 1968 for the centennial of Japanese immigration to Hawaiʻi."},
+      {"name": "Front St / Hotel St", "lat": 20.8724021, "lon": -156.6775831},
+      {"name": "Front St / Dickenson St", "lat": 20.8733862, "lon": -156.6781795},
+      {"name": "Front St / Prison St", "lat": 20.870875, "lon": -156.6765755},
+      {"name": "Lahainaluna Rd / Wainee St", "lat": 20.8765386, "lon": -156.6780961},
+      {"name": "Lahaina Harbor", "lat": 20.8708, "lon": -156.6783, "facts": "The modern small-boat harbor was dredged in 1955 out of the old beach in front of town. Before that, ships anchored in the open roadstead."},
+      {"name": "Kamehameha Iki Park", "lat": 20.8687611, "lon": -156.6760504, "facts": "Shorefront park on the site of royal compounds and later King Kamehameha III School. Named for Kamehameha II (Liholiho), also called Kamehameha Iki."},
+      {"name": "Feast at Lele", "lat": 20.8676993, "lon": -156.6758278},
+      {"name": "Lahaina Shores Beach Resort", "lat": 20.8672916, "lon": -156.6751108, "facts": "1974 mid-rise on the sand at the south end of town — long the only real high-rise on Front Street."},
+      {"name": "505 Front Street", "lat": 20.86798, "lon": -156.6755748},
+      {"name": "Puamana Beach Park", "lat": 20.8551, "lon": -156.6635},
+      {"name": "Launiupoko Beach Park", "lat": 20.8430473, "lon": -156.6528851},
+      {"name": "Lahaina Aquatic Center", "lat": 20.8697895, "lon": -156.6714817},
+      {"name": "Lahaina Recreation Center", "lat": 20.8677912, "lon": -156.6695201},
+      {"name": "Lahaina Yacht Club", "lat": 20.8757509, "lon": -156.6804653},
+      {"name": "Lahaina Public Library (old)", "lat": 20.8727727, "lon": -156.6782087},
+      {"name": "Pioneer Mill smokestack", "lat": 20.8785143, "lon": -156.6764608, "facts": "Pioneer Mill opened 1860. The 225-foot stack went up in 1928 — tallest in Hawaiʻi — and was the landmark left standing after the mill closed in 1999."},
+      {"name": "Prison St / Wainee St", "lat": 20.8718847, "lon": -156.6744053},
+      {"name": "Prison St / Luakini St", "lat": 20.8713617, "lon": -156.6755632},
+      {"name": "Front St / Shaw St", "lat": 20.8679925, "lon": -156.6750312},
+      {"name": "Front St / Baker St", "lat": 20.879018, "lon": -156.6829437},
+      {"name": "Honoapiilani Hwy / Shaw St", "lat": 20.8689474, "lon": -156.6718993},
+      {"name": "Honoapiilani Hwy / Prison St", "lat": 20.8723475, "lon": -156.6733003},
+      {"name": "Malu Ulu o Lele Park", "lat": 20.8691847, "lon": -156.6745377, "facts": "Built over the filled fishpond and Mokuʻula island. The name means “shelter of the breadfruit of Lele,” an old name for Lahaina."},
+      {"name": "Lahaina Cannery Mall", "lat": 20.886166, "lon": -156.68414},
+      {"name": "Old Lahaina Luau", "lat": 20.886034, "lon": -156.6853219},
+      {"name": "Mala Wharf", "lat": 20.8851611, "lon": -156.6869965, "facts": "Opened in 1922 as a working shipping facility for agriculture, the Mala Wharf pier mostly destroyed by the waves of Hurricane Iniki in 1992. It is now a popular snorkeling spot."},
+      {"name": "Mala boat ramp", "lat": 20.8852873, "lon": -156.6867784},
+      {"name": "Baby Beach (Puunoa)", "lat": 20.8820512, "lon": -156.6875964},
+      {"name": "Lahaina Gateway", "lat": 20.8860658, "lon": -156.6815722},
+      {"name": "Foodland Farms Lahaina Gateway", "lat": 20.8852772, "lon": -156.6800129},
+      {"name": "Safeway Lahaina", "lat": 20.8867908, "lon": -156.6842437},
+      {"name": "Lahaina Square Shopping Center", "lat": 20.877719, "lon": -156.6782051},
+      {"name": "Lahaina Post Office (downtown)", "lat": 20.877308, "lon": -156.6804349},
+      {"name": "Dickenson Square", "lat": 20.8742405, "lon": -156.6767183},
+      {"name": "Kahoma Stream mouth", "lat": 20.8856356, "lon": -156.6862929},
+      {"name": "Puunoa Point", "lat": 20.882245, "lon": -156.6877842},
+      {"name": "Front St / Kenui St", "lat": 20.8810955, "lon": -156.68441},
+      {"name": "Front St / Ala Moana St", "lat": 20.8833259, "lon": -156.6852978},
+      {"name": "Honoapiilani Hwy / Keawe St", "lat": 20.8849105, "lon": -156.6821498},
+      {"name": "Honoapiilani Hwy / Kapunakea St", "lat": 20.8875109, "lon": -156.6831189},
+      {"name": "Lahainaluna Rd / Honoapiilani Hwy", "lat": 20.8774768, "lon": -156.677016},
+      {"name": "Mill Street / Lahainaluna Rd", "lat": 20.878059, "lon": -156.6762865},
+      {"name": "Lahaina Hongwanji Mission hall", "lat": 20.870736, "lon": -156.6737911, "facts": "Japanese Hongwanji Buddhist mission serving plantation families; the hall was a community and funeral center for generations of West Maui Japanese."},
+      {"name": "Lahaina Civic Center", "lat": 20.9050431, "lon": -156.6837448},
+      {"name": "Wahikuli Wayside Park", "lat": 20.8996993, "lon": -156.6849715},
+      {"name": "Princess Nahienaena Elementary", "lat": 20.8886519, "lon": -156.6638374},
+      {"name": "Lahaina Intermediate School", "lat": 20.8862963, "lon": -156.6622961},
+      {"name": "Lahainaluna High School", "lat": 20.8892132, "lon": -156.6594887},
+      {"name": "Lahainaluna High football field", "lat": 20.8865503, "lon": -156.6592589},
+      {"name": "David Malo Day site (Lahainaluna)", "lat": 20.8877022, "lon": -156.6588271, "facts": "Hosted annually at Border’s Field at Lahainaluna High School."},
+      {"name": "Leialii Parkway / Honoapiilani Hwy", "lat": 20.9020463, "lon": -156.6845298},
+      {"name": "Wahikuli / Honoapiilani Hwy turnout", "lat": 20.8950245, "lon": -156.6847832},
+      {"name": "Lahainaluna Rd / Kelawea St", "lat": 20.8810316, "lon": -156.6717387},
+      {"name": "Wahikuli Terrace Park", "lat": 20.891091, "lon": -156.6834301},
+      {"name": "Lahaina Bypass / Keawe St", "lat": 20.8887613, "lon": -156.6754121},
+      {"name": "Lahaina Bypass / Lahainaluna Rd", "lat": 20.883625, "lon": -156.6665956},
+      {"name": "Hanakaoo Beach Park (Canoe Beach)", "lat": 20.9109864, "lon": -156.6900373},
+      {"name": "Hyatt Regency Maui", "lat": 20.9128, "lon": -156.6919},
+      {"name": "Marriott Maui Ocean Club", "lat": 20.9158003, "lon": -156.6953874},
+      {"name": "The Westin Maui Resort", "lat": 20.9198725, "lon": -156.6950655},
+      {"name": "Kaanapali Beach Hotel", "lat": 20.9242552, "lon": -156.6937709},
+      {"name": "Whalers Village", "lat": 20.9214, "lon": -156.6949},
+      {"name": "The Whaler on Kaanapali Beach", "lat": 20.9225348, "lon": -156.6946471, "facts": "Twin oceanfront towers built 1974–76, 360 units, next door to Whalers Village."},
+      {"name": "Maui Eldorado Kaanapali", "lat": 20.927826, "lon": -156.6911316},
+      {"name": "Kaanapali Beach Walk (mid)", "lat": 20.9174723, "lon": -156.6964263},
+      {"name": "Hula Grill Kaanapali", "lat": 20.9217749, "lon": -156.6954714},
+      {"name": "Leilani's on the Beach", "lat": 20.9211769, "lon": -156.6956502},
+      {"name": "Royal Kaanapali Golf Clubhouse", "lat": 20.9180485, "lon": -156.6909277},
+      {"name": "Fairway Shops at Kaanapali", "lat": 20.9259855, "lon": -156.6905558},
+      {"name": "Kaanapali Parkway / Nohea Kai Dr", "lat": 20.918593, "lon": -156.6937423},
+      {"name": "Kaanapali Beach (south end)", "lat": 20.9106924, "lon": -156.6896689},
+      {"name": "Whalers Village parking garage", "lat": 20.9223227, "lon": -156.6939944},
+      {"name": "Hyatt Swan Court / lagoon", "lat": 20.9122383, "lon": -156.691829},
+      {"name": "Sheraton Maui Resort", "lat": 20.9265901, "lon": -156.6945022},
+      {"name": "Black Rock (Puu Kekaa)", "lat": 20.9266, "lon": -156.6968, "facts": "Sacred leina a ka ʻuhane — a leaping-off point where souls of the dead were said to jump into the next world. Also the Sheraton’s famous snorkel cove."},
+      {"name": "Kahekili Beach Park", "lat": 20.9367646, "lon": -156.6922617},
+      {"name": "Royal Lahaina Resort", "lat": 20.9317442, "lon": -156.6923797},
+      {"name": "Honua Kai Resort", "lat": 20.9440994, "lon": -156.6908133},
+      {"name": "Westin Kaanapali Ocean Resort Villas", "lat": 20.9377666, "lon": -156.6915965},
+      {"name": "Aston Kaanapali Shores", "lat": 20.9494433, "lon": -156.6894722},
+      {"name": "Maui Kaanapali Villas", "lat": 20.9340189, "lon": -156.6912389},
+      {"name": "Kaanapali Landing", "lat": 20.9288332, "lon": -156.6955349},
+      {"name": "Black Rock snorkeling cove", "lat": 20.926874, "lon": -156.6970396},
+      {"name": "Kekaa Dr / Kaanapali Pkwy", "lat": 20.9226885, "lon": -156.692934},
+      {"name": "Honua Kai north tower", "lat": 20.9456758, "lon": -156.6906917},
+      {"name": "Royal Lahaina Tennis Ranch", "lat": 20.932763, "lon": -156.6906059},
+      {"name": "Kaanapali Beach (north end)", "lat": 20.9268841, "lon": -156.695863},
+      {"name": "Honokowai Beach Park", "lat": 20.9545415, "lon": -156.6864163},
+      {"name": "Honokowai Marketplace", "lat": 20.9483628, "lon": -156.6876948},
+      {"name": "Honokowai Park playground", "lat": 20.9541032, "lon": -156.6866335},
+      {"name": "Hale Mahina Beach Resort", "lat": 20.960517, "lon": -156.6840005},
+      {"name": "Kaleialoha condos", "lat": 20.9580282, "lon": -156.6851074},
+      {"name": "Paki Maui", "lat": 20.9533609, "lon": -156.6871762},
+      {"name": "Noelani condos", "lat": 20.9661233, "lon": -156.6821194},
+      {"name": "Mahina Surf", "lat": 20.9651716, "lon": -156.6828024},
+      {"name": "Lokelani condos", "lat": 20.9596796, "lon": -156.6845101},
+      {"name": "Honokowai Beach Park restrooms", "lat": 20.9540831, "lon": -156.6866818},
+      {"name": "Kapalua Airport (JHM)", "lat": 20.9619105, "lon": -156.6743016},
+      {"name": "Mahinahina Stream mouth", "lat": 20.9602496, "lon": -156.6843926},
+      {"name": "Honokowai Stream mouth", "lat": 20.9505642, "lon": -156.6903847},
+      {"name": "Hale Kai Honokowai", "lat": 20.9554315, "lon": -156.6860354},
+      {"name": "Kaanapali Beach Club", "lat": 20.9485215, "lon": -156.6907132},
+      {"name": "Hololani Resort", "lat": 20.9728339, "lon": -156.6793334},
+      {"name": "Papakea Resort", "lat": 20.9509562, "lon": -156.6888142},
+      {"name": "Pohaku Park (S-Turns)", "lat": 20.9678, "lon": -156.6812},
+      {"name": "Kahana Gateway Shopping Center", "lat": 20.9724666, "lon": -156.677666},
+      {"name": "Kahana Village", "lat": 20.9766775, "lon": -156.6775793},
+      {"name": "Kahana Reef", "lat": 20.9747724, "lon": -156.6786557},
+      {"name": "Kahana Sunset", "lat": 20.9848484, "lon": -156.6717196},
+      {"name": "Valley Isle Resort", "lat": 20.9713245, "lon": -156.679675},
+      {"name": "Kahana Manor", "lat": 20.9708637, "lon": -156.6781157},
+      {"name": "Kahana Falls", "lat": 20.9692123, "lon": -156.678763},
+      {"name": "S-Turns surf break", "lat": 20.9674374, "lon": -156.683321},
+      {"name": "Kahana Stream mouth", "lat": 20.9775231, "lon": -156.6773558},
+      {"name": "Lower Honoapiilani Rd / Hui Rd F", "lat": 20.9919546, "lon": -156.6671374},
+      {"name": "Honoapiilani Hwy / Kahana Nui Rd", "lat": 20.9754202, "lon": -156.6757652},
+      {"name": "Nohonani condos", "lat": 20.9563194, "lon": -156.6857435},
+      {"name": "Kahana Outrigger", "lat": 20.9756506, "lon": -156.6779119},
+      {"name": "Hui Rd E beach access", "lat": 20.9837048, "lon": -156.6741836},
+      {"name": "Kahana Beach (mid)", "lat": 20.9696582, "lon": -156.6802955},
+      {"name": "Lower Honoapiilani Rd / Office Rd", "lat": 21.0030713, "lon": -156.65625},
+      {"name": "Kahana Pump station area", "lat": 20.9763694, "lon": -156.6769972},
+      {"name": "Napili Bay", "lat": 20.9958553, "lon": -156.6672188},
+      {"name": "Napili Kai Beach Resort", "lat": 20.9970089, "lon": -156.6656184, "facts": "First hotel north of Kāʻanapali. Construction started 1960; first 12 units opened 1962. Height here was later capped at “a coconut tree.”"},
+      {"name": "Napili Plaza", "lat": 20.9849219, "lon": -156.667074},
+      {"name": "Napili Shores", "lat": 20.9930657, "lon": -156.6676784},
+      {"name": "The Mauian on Napili Bay", "lat": 20.9955147, "lon": -156.6656166},
+      {"name": "Napili Point Resort", "lat": 20.9922744, "lon": -156.6682756},
+      {"name": "Napili Surf Beach Resort", "lat": 20.993877, "lon": -156.6673011},
+      {"name": "Honokeana Cove", "lat": 20.9916733, "lon": -156.6687906},
+      {"name": "Lower Honoapiilani Rd / Napilihau St", "lat": 20.9869929, "lon": -156.6685885},
+      {"name": "Honoapiilani Hwy / Napilihau St", "lat": 20.9846381, "lon": -156.6657418},
+      {"name": "Napili Park", "lat": 20.9875731, "lon": -156.660465},
+      {"name": "Gazebo Restaurant (Napili Kai)", "lat": 20.9938678, "lon": -156.6682148},
+      {"name": "Lower Honoapiilani Rd / Hui Rd", "lat": 20.9935915, "lon": -156.6657731},
+      {"name": "Napili Bay public access path", "lat": 20.9946892, "lon": -156.6664267},
+      {"name": "Kapalua Bay", "lat": 20.9999, "lon": -156.6676},
+      {"name": "The Montage Kapalua Bay", "lat": 21.0015763, "lon": -156.6652429},
+      {"name": "The Ritz-Carlton, Kapalua", "lat": 21.0016497, "lon": -156.6540778},
+      {"name": "DT Fleming Beach Park", "lat": 21.0047647, "lon": -156.6517568},
+      {"name": "Oneloa Bay (Ironwoods)", "lat": 21.0045878, "lon": -156.6596317},
+      {"name": "Honolua Bay", "lat": 21.0146968, "lon": -156.6395617},
+      {"name": "Slaughterhouse Beach (Mokuleia)", "lat": 21.0111447, "lon": -156.6421169},
+      {"name": "DT Fleming lifeguard tower", "lat": 21.0047923, "lon": -156.6506848},
+      {"name": "Plantation Course clubhouse", "lat": 21.0071351, "lon": -156.6402787},
+      {"name": "Office Rd / Honoapiilani Hwy", "lat": 20.9929079, "lon": -156.653055},
+      {"name": "Ritz-Carlton spa / lawn", "lat": 21.0016088, "lon": -156.6545427},
+      {"name": "Oneloa / Ironwoods access", "lat": 21.002961, "lon": -156.6586053},
+      {"name": "Honolua Bay trailhead parking", "lat": 21.0135301, "lon": -156.6339406},
+      {"name": "Slaughterhouse stairs top", "lat": 21.0106565, "lon": -156.6424227},
+      {"name": "Olowalu General Store", "lat": 20.811423, "lon": -156.6220397},
+      {"name": "Olowalu Beach", "lat": 20.8094339, "lon": -156.6147673},
+      {"name": "Ukumehame Beach Park", "lat": 20.7946906, "lon": -156.581955},
+      {"name": "Puamana Condominiums", "lat": 20.8581534, "lon": -156.6663158, "facts": "Gated low-rise community at the south entrance to Lahaina, converted from an older beach estate into condos in the late 1960s."},
+      {"name": "The Wharf Cinema Center", "lat": 20.8725664, "lon": -156.6768569},
+      {"name": "Fleetwood's on Front St", "lat": 20.8743383, "lon": -156.678713},
+      {"name": "Kimo's", "lat": 20.8760099, "lon": -156.6805986},
+      {"name": "Cheeseburger in Paradise", "lat": 20.8753457, "lon": -156.6800246},
+      {"name": "Lahaina Grill", "lat": 20.8755554, "lon": -156.6795427},
+      {"name": "Longhi's Lahaina", "lat": 20.877009, "lon": -156.6810358},
+      {"name": "Lahaina Center", "lat": 20.8781133, "lon": -156.6809392},
+      {"name": "Longs Drugs Cannery Mall", "lat": 20.8857008, "lon": -156.6843715},
+      {"name": "Ace Hardware Lahaina", "lat": 20.8866079, "lon": -156.6822723},
+      {"name": "Walgreens Lahaina", "lat": 20.884345, "lon": -156.6809553},
+      {"name": "McDonald's Lahaina", "lat": 20.8778402, "lon": -156.6793594},
+      {"name": "Hale Pai Print Shop", "lat": 20.8899233, "lon": -156.659807, "facts": "1834 print shop at Lahainaluna. Produced Ka Lama Hawaii, the first newspaper printed in the Hawaiian Islands."},
+      {"name": "Lahaina Sugar Cane Train Depot", "lat": 20.8803796, "lon": -156.6794202, "facts": "Depot for the tourist railroad that ran the old Pioneer Mill right-of-way from 1970 until service ended in the 2010s."},
+      {"name": "Front St / Papalaua St", "lat": 20.8771084, "lon": -156.6812539},
+      {"name": "Wainee St / Dickenson St", "lat": 20.8746891, "lon": -156.6765913},
+      {"name": "Maui Medical Group Lahaina", "lat": 20.8710192, "lon": -156.6756061},
+      {"name": "Sacred Hearts School", "lat": 20.8756, "lon": -156.676},
+      {"name": "Kaanapali Alii", "lat": 20.9183642, "lon": -156.6956466, "facts": "1982 luxury beachfront condo-hotel, 264 one- and two-bedroom apartments on the sand at Nohea Kai."},
+      {"name": "Westin Nanea Ocean Villas", "lat": 20.9425346, "lon": -156.6908848},
+      {"name": "Mahana at Kaanapali", "lat": 20.9466711, "lon": -156.6918862},
+      {"name": "Kaanapali Royal", "lat": 20.9221874, "lon": -156.6906595},
+      {"name": "Duke's Beach House", "lat": 20.9445995, "lon": -156.6916895},
+      {"name": "Drums of the Pacific Luau", "lat": 20.9117623, "lon": -156.6910771},
+      {"name": "Royal Lahaina Luau", "lat": 20.9328783, "lon": -156.6926086},
+      {"name": "Pizza Paradiso Honokowai", "lat": 20.9485983, "lon": -156.6876858},
+      {"name": "Sands of Kahana", "lat": 20.9701457, "lon": -156.6795123},
+      {"name": "Kahana Villa", "lat": 20.9684326, "lon": -156.6795319},
+      {"name": "Pohailani Maui", "lat": 20.9735452, "lon": -156.6784},
+      {"name": "Hale Ono Loa", "lat": 20.9588861, "lon": -156.6845461},
+      {"name": "Hoyochi Nikko", "lat": 20.9609412, "lon": -156.6837108},
+      {"name": "Maui Preparatory Academy", "lat": 20.9825812, "lon": -156.6685975},
+      {"name": "Sea House Restaurant", "lat": 20.9967, "lon": -156.6659224},
+      {"name": "Napili Market", "lat": 20.9850204, "lon": -156.6675541},
+      {"name": "Honolua Store", "lat": 20.9988135, "lon": -156.6545874, "facts": "1929 Honolua Ranch / Baldwin Packers plantation store. Classic green plantation-era shop at the edge of Kapalua."},
+      {"name": "Merriman's Kapalua", "lat": 20.998422, "lon": -156.6671777},
+      {"name": "Sansei Seafood Kapalua", "lat": 20.9984137, "lon": -156.6543961},
+      {"name": "The Burger Shack Kapalua", "lat": 21.0042405, "lon": -156.6519508},
+      {"name": "Kapalua Tennis Garden", "lat": 20.9976566, "lon": -156.6642255},
+      {"name": "Kapalua Bay Villas", "lat": 21.0029418, "lon": -156.6627824},
+      {"name": "Pineapple Hill Kapalua", "lat": 20.9930557, "lon": -156.6570354},
+      {"name": "Punalau Beach (Windmills)", "lat": 21.022148, "lon": -156.6255534},
+      {"name": "Honokohau Bay", "lat": 21.0219777, "lon": -156.6098285},
+      {"name": "Kuhua Camp", "lat": 20.88094016953892, "lon": -156.67553901672363, "facts": "Kuhua Camp (also known as Mill Camp) was a historic, densely populated residential neighborhood in Lahaina, Maui, built in the 1920s as housing for sugar plantation workers."},
+      {"name": "Villages of Leialii", "lat": 20.900846909602084, "lon": -156.6819262504578, "facts": "State / DHHL housing project mauka of Honoapiʻilani north of town. Built in phases from the 1990s as homestead and affordable lots."},
+      {"name": "Kahoma Village", "lat": 20.882777928167073, "lon": -156.68366789817813},
+      {"name": "Hale Mahaolu Eono", "lat": 20.88142300102918, "lon": -156.67140126228335, "facts": "Hale Mahaolu Eono was a low-income senior housing community in Lahaina that provided affordable independent living for the local elderly (Kupuna)."},
+      {"name": "Lahaina Roads", "lat": 20.890719292884487, "lon": -156.68515473604202, "facts": "Lāhainā Roads Condo is a low-rise, oceanfront condo offering direct sunset views and proximity to the northern end of Front Street. Built in 1969, the property survived the August 2023 Lahaina wildfire and reopened following full repairs and renovations in June 2025."},
+      {"name": "Ainakea Rd / Fleming Rd", "lat": 20.89384326569494, "lon": -156.68279170989993},
+      {"name": "Fleming Rd / Honoapiilani Hwy", "lat": 20.893582658684174, "lon": -156.6847747564316},
+      {"name": "Kaniau Rd / Honoapiilani Hwy", "lat": 20.89967757020322, "lon": -156.68464064598086},
+      {"name": "Wainee St / Shaw St", "lat": 20.868775311158032, "lon": -156.67247056961062, "facts": "On this corner is Lahaina Baptist Church. Services at 9am Sunday with Pastor Erik Naylor."},
+      {"name": "Wainee St / Baker St", "lat": 20.88024849819449, "lon": -156.6807255148888},
+      {"name": "Wainee St / Papalaua St", "lat": 20.878268696667586, "lon": -156.67933613061905},
+      {"name": "Wainee St / Kenui St", "lat": 20.882133879861914, "lon": -156.681906580925},
+      {"name": "Luakini St / Dickenson St", "lat": 20.873806947017723, "lon": -156.67766958475116},
+      {"name": "Panaewa St / Wainee St", "lat": 20.87598646269957, "lon": -156.6776525974274},
+      {"name": "Aholo St / Front St", "lat": 20.86306011082147, "lon": -156.67103558778763},
+      {"name": "Aholo St / Honoapiilani Hwy", "lat": 20.863812848798936, "lon": -156.66952550411224},
+      {"name": "Prison St / Mill St", "lat": 20.872618182901114, "lon": -156.67260110378268},
+      {"name": "Dickenson St / Honoapiilani Hwy", "lat": 20.87581604559485, "lon": -156.675355732441},
+      {"name": "Papalaua St / Honoapiilani Hwy", "lat": 20.878798317016628, "lon": -156.67845994234088},
+      {"name": "Kenui St / Honoapiilani Hwy", "lat": 20.882375293882287, "lon": -156.68161690235138},
+      {"name": "Leialii Pkwy (mid)", "lat": 20.901646231361415, "lon": -156.68221771717072},
+      {"name": "Kai Hele Ku / Honoapiilani Hwy", "lat": 20.843285395601374, "lon": -156.6524684429169},
+      {"name": "International Colony Club", "lat": 20.934329580000636, "lon": -156.68917894363406, "facts": "One of Kāʻanapali’s oldest condo projects: 44 cottages on 10 acres, built in the 1960s, still one house per building."},
+      {"name": "Kaanapali Plantation", "lat": 20.933811846472047, "lon": -156.6861999034882, "facts": "1970 hillside condo — 62 units in 15 buildings, set back from the beach above the Royal Course."},
+      {"name": "Maui Sands Honokowai", "lat": 20.952275455715977, "lon": -156.68760180473328},
+      {"name": "Hale Maui Apartment Hotel", "lat": 20.95609781961036, "lon": -156.6856750845909},
+      {"name": "Polynesian Shores", "lat": 20.963201245657345, "lon": -156.68339073657992},
+      {"name": "Kuleana Resort", "lat": 20.9620541002585, "lon": -156.68366074562073},
+      {"name": "Pikake", "lat": 20.955854019499153, "lon": -156.68590307235718},
+      {"name": "Makani Sands", "lat": 20.957458751288026, "lon": -156.68525218963626},
+      {"name": "Honokowai Palms", "lat": 20.95471182738608, "lon": -156.68530046939853},
+      {"name": "Royal Kahana", "lat": 20.971994064998263, "lon": -156.67947471141818},
+      {"name": "Kahana Beach Resort", "lat": 20.969245537995377, "lon": -156.6802116048889},
+      {"name": "Hale Napili", "lat": 20.995207486069052, "lon": -156.6661528761578},
+      {"name": "Napili Villas", "lat": 20.98513891623903, "lon": -156.66959881782535},
+      {"name": "Kahana Ridge", "lat": 20.97333648564377, "lon": -156.67458057403567},
+      {"name": "Akahele St / Honoapiilani Hwy", "lat": 20.96369633553107, "lon": -156.68090701103213},
+      {"name": "Akahele St / Kapalua Airport", "lat": 20.96187125749328, "lon": -156.67622298002243},
+      {"name": "Kuialua St", "lat": 20.88632139745227, "lon": -156.66575610637668},
+      {"name": "Kapalua Place", "lat": 21.002880043138124, "lon": -156.65919363498688},
+      {"name": "Kapunakea St / Front St", "lat": 20.887449910542806, "lon": -156.68475508689883},
+      {"name": "Kelawea Park", "lat": 20.883411114340014, "lon": -156.66767835617065},
+      {"name": "Puunoa St / Front St", "lat": 20.882453600966244, "lon": -156.68507764597646},
+      {"name": "Kohi St / Napilihau St", "lat": 20.98511220362793, "lon": -156.66577577590942},
+      {"name": "Kohi St / Aloalo Pl", "lat": 20.985635602981667, "lon": -156.6650328040123},
+      {"name": "Kohi St / Haku Pl", "lat": 20.986012082084557, "lon": -156.66412353515628},
+      {"name": "Kohi St / Ikaika Pl", "lat": 20.98601876019754, "lon": -156.66342884302142},
+      {"name": "Kohi St / Loa Pl", "lat": 20.986350995942047, "lon": -156.66294157505038},
+      {"name": "Hanawai St / Napilihau St", "lat": 20.985958657169835, "lon": -156.66730016469955},
+      {"name": "Hanawai St / Kiohuohu Ln", "lat": 20.98562475102007, "lon": -156.66877537965775},
+      {"name": "Hanawai St / Polohina Ln", "lat": 20.98564061157907, "lon": -156.66954159736633},
+      {"name": "Hanawai St / Kupele Pl", "lat": 20.98691529415628, "lon": -156.66677087545395},
+      {"name": "Kupele Pl / Kipulu Pl", "lat": 20.98718826013093, "lon": -156.66713386774063},
+      {"name": "Kili Nahe St / Lower Honoapiilani Rd", "lat": 20.986659857654764, "lon": -156.6699904203415},
+      {"name": "Napilihau St / Kili Nahe St", "lat": 20.98662813675154, "lon": -156.66837930679324},
+      {"name": "Haliu St / Lower Honoapiilani Rd", "lat": 20.962760422265596, "lon": -156.68280243873596},
+      {"name": "Mahinahina St / Olali St", "lat": 20.96127179882303, "lon": -156.6823035478592},
+      {"name": "Mahinahina St / Akahele St", "lat": 20.963980197451246, "lon": -156.68171614408493},
+      {"name": "Akahele St / Lower Honoapiilani Rd", "lat": 20.964210626143153, "lon": -156.68234378099442},
+      {"name": "Mahinahina St / Uli St", "lat": 20.96191049774027, "lon": -156.68211400508883},
+      {"name": "Mahinahina St / Haliu St", "lat": 20.962528321548497, "lon": -156.68201386928558},
+      {"name": "Olali St / Lower Honoapiilani Rd", "lat": 20.96151392030221, "lon": -156.6832405328751},
+      {"name": "Mahinahina St / Aea Pl", "lat": 20.960557955628985, "lon": -156.68247878551483, "facts": "On this corner lives one of Maui’s top spear-fisherman."},
+      {"name": "Kainoe St / Pihaa St", "lat": 20.92983859960376, "lon": -156.68085336685184},
+      {"name": "Kainoe St / S Piki Pl", "lat": 20.930192672118128, "lon": -156.6815543174744},
+      {"name": "Kainoe St / S Iwa Pl", "lat": 20.930841524530248, "lon": -156.6827729344368},
+      {"name": "Mauli St / Pihaa St", "lat": 20.92852752192229, "lon": -156.68151855468753},
+      {"name": "Mauli St / Eke Pl", "lat": 20.92876134553416, "lon": -156.68227672576907},
+      {"name": "Mauli St / Puu Anoano St", "lat": 20.92901103534537, "lon": -156.6830223798752},
+      {"name": "S Ulukoa Pl / Amakihi Way", "lat": 20.924955425296403, "lon": -156.6846634930536},
+      {"name": "Akia Pl / Kului Way", "lat": 20.92485393806094, "lon": -156.6828551888466},
+      {"name": "Haloko Pl / Kualapa Lp", "lat": 20.92602892682865, "lon": -156.6842043399811},
+      {"name": "Lokia St / Malanai St", "lat": 20.896681514029915, "lon": -156.68017566204074},
+      {"name": "Aa St / Malanai St", "lat": 20.896568753569053, "lon": -156.68115019798282},
+      {"name": "Kuuipo St / Malanai St", "lat": 20.89640921825378, "lon": -156.68216139078143},
+      {"name": "Ainakea Rd / Wahikuli Rd", "lat": 20.895238173732455, "lon": -156.6829964518547},
+      {"name": "Ainakea Rd / Aipuni St", "lat": 20.900466875297052, "lon": -156.68307870626452},
+      {"name": "Hooli St / Leialii Pkwy", "lat": 20.90152512227767, "lon": -156.68184757232666},
+      {"name": "Ainakea Rd / Kapunakea St", "lat": 20.887772341296447, "lon": -156.68229013681415},
+      {"name": "Keao St / Kapunakea St", "lat": 20.88746076962091, "lon": -156.68365091085437},
+      {"name": "Hoapili St / Kapunakea St", "lat": 20.887470793384615, "lon": -156.6842293739319},
+      {"name": "Front St / Olona Pl", "lat": 20.89045116277682, "lon": -156.68488025665286},
+      {"name": "Kelawea St / Aki St", "lat": 20.882705253593837, "lon": -156.67304903268814},
+      {"name": "Kopili St / Aki St", "lat": 20.880880024331084, "lon": -156.67631149291992},
+      {"name": "Kopili St / Kamamalu St", "lat": 20.881407964777818, "lon": -156.67678356170657},
+      {"name": "Kale St / Paeohi St", "lat": 20.881049600341438, "lon": -156.674345433712},
+      {"name": "Liloa St / Kuialua St", "lat": 20.887173421443524, "lon": -156.66623532772067},
+      {"name": "Kumukahi St / Hopoe St", "lat": 20.88491972393578, "lon": -156.66605919599536},
+      {"name": "Kumukahi St / Hokeo St", "lat": 20.884578074474426, "lon": -156.6666546463967},
+      {"name": "Kauaula Rd / Front St", "lat": 20.865260668296138, "lon": -156.67303740978244},
+      {"name": "Kamano Pl / Kahili Pl", "lat": 20.865095251655823, "lon": -156.6715183854103},
+      {"name": "Aulike St / Leoleo St", "lat": 20.86581623295265, "lon": -156.66925638914114},
+      {"name": "Times Supermarket", "lat": 20.94727901631787, "lon": -156.68761610984805},
+      {"name": "Lanikeha Gated Community", "lat": 20.91623456681015, "lon": -156.68377518653872},
+      {"name": "Maui Police Department - Lahaina Station", "lat": 20.904678937987796, "lon": -156.6844600439072},
+      {"name": "Honoapiilani Hwy / Hinau St", "lat": 20.88153493751981, "lon": -156.68089002370837},
+      {"name": "Lower Honoapiilani Rd / Piina Pl", "lat": 20.967551802273015, "lon": -156.6809606552124},
+      {"name": "Napilihau Rec Center", "lat": 20.98778260633789, "lon": -156.66542261838913},
+      {"name": "Fork and Salad", "lat": 20.884825331864004, "lon": -156.68333888053897},
+      {"name": "Ipukula Way / S Nahale Place", "lat": 20.887285353647783, "lon": -156.68140769004822},
+      {"name": "The Sugar Cane Train Bridge", "lat": 20.912878882569235, "lon": -156.68609797954562},
+      {"name": "Miss Arepas restaurant", "lat": 20.952741358506863, "lon": -156.68637514114383},
+      {"name": "Puamana Pl / Lwr Honoapiilani Rd", "lat": 20.980317212552755, "lon": -156.67443931102756},
+      {"name": "Napili Fire Station", "lat": 20.98490267641887, "lon": -156.66813433170321},
+      {"name": "Napili Ridge Condos", "lat": 20.9891624487353, "lon": -156.6651785373688},
+      {"name": "The Barn in Kapalua", "lat": 20.998031367287, "lon": -156.65485471487048},
+      {"name": "Kai Hele Ku St / Huapala Pl", "lat": 20.849908727542655, "lon": -156.63528978824618}
+    ];
+
+    function hawaiiToday() {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Pacific/Honolulu', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date());
+    }
+    function prettyDate(iso) {
+      const [y,m,d] = iso.split('-').map(Number);
+      return new Date(Date.UTC(y, m-1, d, 18)).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', timeZone: 'Pacific/Honolulu'
+      });
+    }
+    function hashString(s) {
+      let h = 2166136261;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+    function pickDaily(dateStr) {
+      const rng = mulberry32(hashString('lahainatap|' + dateStr + '|v1'));
+      const idx = LOCATIONS.map(function(_, i) { return i; });
+      for (let i = idx.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = idx[i]; idx[i] = idx[j]; idx[j] = tmp;
+      }
+      return idx.slice(0, 5).map(function(i) { return LOCATIONS[i]; });
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = function(x) { return x * Math.PI / 180; };
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2)*Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function scoreFromMeters(m) {
+      const ft = m * 3.28084;
+      const curve = [
+        [0, 100], [90, 100], [120, 99], [160, 98], [220, 97], [300, 96],
+        [400, 95], [550, 94], [700, 93], [850, 92], [1000, 91], [1200, 90],
+        [2000, 85], [4000, 75], [8000, 65], [16000, 45], [32000, 25], [64000, 0]
+      ];
+      if (ft <= curve[0][0]) return curve[0][1];
+      if (ft >= curve[curve.length - 1][0]) return 0;
+      for (let i = 1; i < curve.length; i++) {
+        if (ft <= curve[i][0]) {
+          const t = (ft - curve[i - 1][0]) / (curve[i][0] - curve[i - 1][0]);
+          return Math.round(lerp(curve[i - 1][1], curve[i][1], t));
+        }
+      }
+      return 0;
+    }
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+      }
+      return a;
+    }
+    const DECK_KEY = 'lahainatap_msg_decks_v1';
+    function scoreMessage(total) {
+      const low = [
+        "Ho nah!",
+        "Aye sus, you!",
+        "Ooof bettah luck nex time, auntie.",
+        "Sorry but your score stay hamajangz.",
+        "I stay sorry for you.",
+        "Geography is overrated.",
+        "Just random clicking, huh?",
+        "Lahaina is offended.",
+        "Our condolences.",
+        "Yikes.",
+        "Are you from Lanai?",
+        "You must not be from here.",
+        "Good thing there's tomorrow.",
+        "You discovered a new ahupuaa called Oops.",
+        "Quiet clapping from very far away.",
+        "The pin went on vacation without you.",
+        "Have you considered moving to Molokai?",
+        "Your compass is on island time.",
+        "We still like you.",
+        "Try harder please.",
+        "That was...interesting.",
+        "You need to study Lahaina.",
+        "Is this a joke to you?",
+        "Close, but also very far.",
+        "Your inner tourist won today.",
+        "You can't pronounce Kama'aina, huh?",
+        "The pin applied for witness protection.",
+        "You mapped a feeling, not a street.",
+        "Bold taps. Mysterious destinations.",
+        "Let's just pretend this didn't happen."
+      ];
+      const mid = [
+        "I'm sure someone in Lahaina is proud of you.",
+        "You found West Maui as a concept.",
+        "Halfway to legend, halfway to Kahului.",
+        "Somewhere a gecko is politely confused.",
+        "Respectable wandering. Come back tomorrow.",
+        "Not lost. Just interpretive.",
+        "You just have to commit a little more.",
+        "You'll get there, little one.",
+        "Even Cs get degrees.",
+        "Could have been a little worse.",
+        "Almost there. I still believe in you.",
+        "Decent. The mongoose nods respectfully.",
+        "Love the energy.",
+        "We notice your effort.",
+        "A participation coconut has been awarded.",
+        "I respect your risky guesses.",
+        "Getting warmer. Still wearing a jacket.",
+        "Your Aloha spirit saves you.",
+        "Maybe you're from Kihei.",
+        "Tomorrow will come soon enough."
+      ];
+      const midHigh = [
+        "This is up there.",
+        "Pretty alright, pretty alright.",
+        "Are you a native Lahainan?",
+        "I can tell you've been here.",
+        "Not bad for a tourist.",
+        "You know these roads in your bones.",
+        "You almost made it look easy.",
+        "You seem like a Kahana Ridge type.",
+        "Respectable local-kine guessing.",
+        "The honu recognize your localness.",
+        "You're going places.",
+        "You'll know it all one day.",
+        "Not perfect. Very decent.",
+        "Bzzzzzz. You get a B!",
+        "You and West Maui are talking again.",
+        "Nice. No need make big fuss.",
+        "You couldn't get lost in this town.",
+        "The Safeway chickens are impressed.",
+        "You're trying hard. Have you tried trying very hard?",
+        "This is a score one should share."
+      ];
+      const high = [
+        "You dakine, brah!!",
+        "Ho brah, you smaht!",
+        "You one geographah o wat!?",
+        "Yessah!!",
+        "So hammah, you!",
+        "Cherreh.",
+        "Yeah you!",
+        "I like know how you so smaht.",
+        "We know you good, but no be cocky okay?",
+        "The mynah birds are taking notes.",
+        "The banyan tree just grew a little because of you.",
+        "That was authentically local of you.",
+        "The sugar cane train would have stopped for you.",
+        "A humpback whale just breached somewhere.",
+        "Is this your second job after foodland cashier?",
+        "The crabs came out of their sand holes to see this score.",
+        "Your taps are blessed.",
+        "The coral reef was saved by this score.",
+        "Somebody call the almanac.",
+        "You probably remove your slippers before entering.",
+        "You like spam musubis don't you?",
+        "Aunty like know why you so good.",
+        "You operate a tour bus in Lahaina, huh?",
+        "You are a rare seashell.",
+        "This is something to brag in line at Times.",
+        "You just made the smokestack start smoking again."
+      ];
+      const perfect = [
+        "Cheehooooo!!!!!",
+        "Have you considered being the Lahaina mayor!?",
+        "Be honest, you're the game designer, huh?",
+        "Brah, no lie, you gotta be cheating.",
+        "Perfectly splendid!",
+        "Being perfect suits you well.",
+        "Kinda feels lonely being the best, huh?",
+        "Careful being so good, you might get bored of this game.",
+        "We're going to rebuild Moku'ula for you to live on.",
+        "GPS called to offer you a job.",
+        "You could do this with your eyes closed.",
+        "Even the trade winds paused in amazement.",
+        "You. Are. Untouchable.",
+        "Lahainaluna is changing it's alma mater to include a line about you.",
+        "That was illegally accurate.",
+        "The L just lit itself for you.",
+        "Are you a Hawaiian god?",
+        "You can pronounce any Hawaiian word.",
+        "I am in awe.",
+        "A Merriman's gift card has been mailed to you."
+      ];
+      let band = 'low';
+      let list = low;
+      if (total >= 1000) { band = 'perfect'; list = perfect; }
+      else if (total >= 900) { band = 'high'; list = high; }
+      else if (total >= 750) { band = 'midHigh'; list = midHigh; }
+      else if (total >= 500) { band = 'mid'; list = mid; }
+      let store = {};
+      try { store = JSON.parse(localStorage.getItem(DECK_KEY) || '{}'); } catch (e) {}
+      if (!Array.isArray(store[band]) || store[band].length === 0) {
+        store[band] = shuffle(list);
+      }
+      const msg = store[band].shift();
+      localStorage.setItem(DECK_KEY, JSON.stringify(store));
+      return msg;
+    }
+    function formatDistance(meters) {
+      const feet = meters * 3.28084;
+      if (feet < 5280) return Math.round(feet).toLocaleString() + ' feet away';
+      const miles = feet / 5280;
+      return miles.toFixed(miles < 10 ? 2 : 1) + ' miles away';
+    }
+
+    let audioCtx = null;
+    function unlockAudio() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      } catch (e) {}
+    }
+    function playTone(freq, duration, type, volume) {
+      try {
+        unlockAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = volume || 0.15;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+    function playTap() { playTone(880, 0.08, 'sine', 0.12); }
+    function playSubmit() {
+      playTone(523, 0.12, 'triangle', 0.18);
+      setTimeout(function() { playTone(659, 0.15, 'triangle', 0.14); }, 80);
+    }
+    function playVictory() {
+      [523, 659, 784, 1047].forEach(function(f, i) {
+        setTimeout(function() { playTone(f, 0.28, 'sine', 0.16); }, i * 140);
+      });
+    }
+
+    const guessIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;background:#38bdf8;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.55)"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+    const trueIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;background:#f59e0b;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.55)"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+
+    let map, guessMarker, trueMarker, line, reviewLayer;
+    let today = hawaiiToday();
+    let roundList = pickDaily(today);
+    let roundIndex = 0;
+    let guessLatLng = null;
+    let roundScores = [];
+    let roundGuesses = [];
+    let lastSharePlain = '';
+    let playing = false;
+
+    function loadPlayed() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data && data.date === today && Array.isArray(data.scores) && data.scores.length === 5) return data;
+      } catch (e) {}
+      return null;
+    }
+    function savePlayed(scores, message) {
+      const payload = {
+        date: today,
+        scores: scores,
+        names: roundList.map(function(x){ return x.name; }),
+        guesses: roundGuesses,
+        message: message
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function sharePayload(scores, message) {
+      const total = scores.reduce(function(a,b){ return a+b; }, 0) * 2;
+      const line1 = 'LahainaTap ' + today;
+      const line3 = scores.join(', ');
+      const line4 = 'Final: ' + total + '/1000 - ' + message;
+      return line1 + '\n' + SHARE_DISPLAY + '\n' + line3 + '\n' + line4;
+    }
+    function paintShareBox(el, scores, message) {
+      lastSharePlain = sharePayload(scores, message);
+      el.textContent = lastSharePlain;
+    }
+    function factForName(name) {
+      for (let i = 0; i < LOCATIONS.length; i++) {
+        if (LOCATIONS[i].name === name && LOCATIONS[i].facts) return LOCATIONS[i].facts;
+      }
+      return '';
+    }
+    function openFact(name) {
+      const f = factForName(name);
+      if (!f) return;
+      document.getElementById('fact-title').textContent = name;
+      document.getElementById('fact-body').textContent = f;
+      document.getElementById('fact-modal').classList.add('show');
+      document.getElementById('credits-backdrop').classList.add('show');
+    }
+    function recapHtml(names, scores, guesses) {
+      let html = '';
+      for (let i = 0; i < 5; i++) {
+        const g = guesses && guesses[i];
+        const dist = (g && g.meters != null) ? formatDistance(g.meters) : '';
+        const has = !!factForName(names[i]);
+        html += '<div class="recap-row"><span class="recap-num">' + (i + 1) + '</span>' +
+          '<span class="recap-name' + (has ? ' has-fact' : '') + '"' +
+          (has ? ' data-name="' + (names[i] || '').replace(/"/g, '&quot;') + '"' : '') +
+          '>' + (names[i] || '') + '</span>' +
+          '<span class="recap-meta"><span class="recap-pts">' + scores[i] + '</span>' +
+          (dist ? '<span class="recap-dist">' + dist + '</span>' : '') +
+          '</span></div>';
+      }
+      return html;
+    }
+
+    function setStatus(t) { document.getElementById('status').textContent = t; }
+    function renderDots() {
+      const wrap = document.getElementById('progress');
+      wrap.innerHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot' + (i < roundIndex ? ' done' : i === roundIndex ? ' current' : '');
+        wrap.appendChild(d);
+      }
+    }
+    function updateTotal() {
+      const raw = roundScores.reduce(function(a,b){ return a+b; }, 0);
+      document.getElementById('running-total').textContent = (raw * 2) + ' / 1000';
+    }
+
+    function initMap() {
+      if (map) return;
+      map = L.map('map', {
+        center: [20.92, -156.68],
+        zoom: 12,
+        minZoom: 11,
+        maxZoom: 19,
+        zoomControl: true
+      });
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri', maxZoom: 19
+      }).addTo(map);
+      map.setMaxBounds(L.latLngBounds([[20.76, -156.73], [21.05, -156.55]]));
+      map.on('click', onMapClick);
+      setTimeout(function(){ map.invalidateSize(); }, 80);
+    }
+
+    function numberedIcon(color, n) {
+      return L.divIcon({
+        className: '',
+        html: '<div style="width:20px;height:20px;background:' + color + ';border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.55);color:#0f172a;font:700 11px/16px -apple-system,sans-serif;text-align:center">' + n + '</div>',
+        iconSize: [20,20], iconAnchor: [10,10]
+      });
+    }
+    function clearMarks() {
+      if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
+      if (trueMarker) { map.removeLayer(trueMarker); trueMarker = null; }
+      if (line) { map.removeLayer(line); line = null; }
+      if (reviewLayer) { map.removeLayer(reviewLayer); reviewLayer = null; }
+    }
+    function showAllPins(guesses) {
+      if (!map || !guesses || !guesses.length) return;
+      clearMarks();
+      reviewLayer = L.layerGroup().addTo(map);
+      const pts = [];
+      for (let i = 0; i < 5; i++) {
+        const loc = roundList[i];
+        const g = guesses[i];
+        if (!loc) continue;
+        const tLatLng = L.latLng(loc.lat, loc.lon);
+        const gold = L.marker(tLatLng, { icon: numberedIcon('#f59e0b', i + 1), zIndexOffset: 400 }).addTo(reviewLayer);
+        if (loc.facts) {
+          gold.on('click', function() { openFact(loc.name); });
+        }
+        pts.push(tLatLng);
+        if (g && g.lat != null) {
+          const gLatLng = L.latLng(g.lat, g.lng);
+          L.marker(gLatLng, { icon: numberedIcon('#38bdf8', i + 1), zIndexOffset: 300 }).addTo(reviewLayer);
+          L.polyline([gLatLng, tLatLng], { color: '#f8fafc', weight: 2, dashArray: '5 6', opacity: 0.85 }).addTo(reviewLayer);
+          pts.push(gLatLng);
+        }
+      }
+      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2));
+      setTimeout(function(){ map.invalidateSize(); }, 80);
+    }
+
+    function onMapClick(e) {
+      if (!playing) return;
+      unlockAudio();
+      playTap();
+      guessLatLng = e.latlng;
+      if (guessMarker) map.removeLayer(guessMarker);
+      guessMarker = L.marker(guessLatLng, { icon: guessIcon, zIndexOffset: 300 }).addTo(map);
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+    }
+
+    function showGuessing() {
+      playing = true;
+      guessLatLng = null;
+      document.getElementById('prompt').style.display = 'block';
+      document.getElementById('top-bar').classList.add('show');
+      document.getElementById('controls').style.display = 'block';
+      document.getElementById('round-result').classList.remove('show');
+      document.getElementById('final-result').classList.remove('show');
+      document.getElementById('locked').classList.remove('show');
+      document.getElementById('address').textContent = roundList[roundIndex].name;
+      document.getElementById('round-label').textContent = '(' + (roundIndex + 1) + ' of 5)';
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Tap the map to place your guess';
+      setStatus('Tap the map, then Submit.');
+      renderDots();
+      updateTotal();
+      initMap();
+      clearMarks();
+      map.setView([20.92, -156.68], 12);
+      setTimeout(function(){ map.invalidateSize(); }, 60);
+    }
+
+    function submitGuess() {
+      if (!playing || !guessLatLng) return;
+      unlockAudio();
+      playSubmit();
+      playing = false;
+      const loc = roundList[roundIndex];
+      const meters = haversine(guessLatLng.lat, guessLatLng.lng, loc.lat, loc.lon);
+      const pts = scoreFromMeters(meters);
+      roundScores.push(pts);
+      roundGuesses.push({ lat: guessLatLng.lat, lng: guessLatLng.lng, meters: meters });
+      trueMarker = L.marker([loc.lat, loc.lon], { icon: trueIcon, zIndexOffset: 400 }).addTo(map);
+      line = L.polyline([guessLatLng, [loc.lat, loc.lon]], {
+        color: '#f8fafc', weight: 2, dashArray: '5 6', opacity: 0.9
+      }).addTo(map);
+      map.fitBounds(L.latLngBounds([guessLatLng, [loc.lat, loc.lon]]).pad(0.45));
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('round-score').textContent = pts + ' / 100';
+      document.getElementById('round-dist').textContent = formatDistance(meters);
+      const factsEl = document.getElementById('round-facts');
+      if (loc.facts) {
+        document.getElementById('round-facts-text').textContent = loc.facts;
+        factsEl.style.display = 'block';
+      } else {
+        factsEl.style.display = 'none';
+      }
+      document.getElementById('next-btn').textContent = roundIndex === 4 ? 'See final score' : 'Next';
+      document.getElementById('round-result').classList.add('show');
+      updateTotal();
+      setStatus('Blue = your guess. Gold = the place.');
+    }
+
+    function nextLocation() {
+      roundIndex += 1;
+      if (roundIndex >= 5) {
+        finishGame();
+        return;
+      }
+      showGuessing();
+    }
+
+    function finishGame() {
+      const raw = roundScores.reduce(function(a,b){ return a+b; }, 0);
+      const total = raw * 2;
+      const message = scoreMessage(total);
+      savePlayed(roundScores, message);
+      document.getElementById('prompt').style.display = 'none';
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('round-result').classList.remove('show');
+      document.getElementById('total-score').textContent = total + ' / 1000';
+      document.getElementById('score-breakdown').textContent = message;
+      document.getElementById('recap-list').innerHTML = recapHtml(roundList.map(function(x){ return x.name; }), roundScores, roundGuesses);
+      document.body.classList.add('endgame');
+      paintShareBox(document.getElementById('share-box'), roundScores, message);
+      document.getElementById('final-result').classList.add('show');
+      setStatus('Blue = guess. Gold = place. Same number is a pair.');
+      renderDots();
+      showAllPins(roundGuesses);
+      playVictory();
+      const banner = document.getElementById('victory-banner');
+      banner.classList.remove('show');
+      void banner.offsetWidth;
+      banner.classList.add('show');
+      burstParticles(document.getElementById('final-result'));
+    }
+
+    function burstParticles(parent) {
+      const colors = ['#38bdf8','#fbbf24','#22c55e','#f472b6','#a78bfa'];
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = (8 + Math.random() * 84) + '%';
+        p.style.top = '8px';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDelay = (Math.random() * 0.25) + 's';
+        parent.appendChild(p);
+        setTimeout(function(){ p.remove(); }, 1800);
+      }
+    }
+
+    function copyShare(btn) {
+      const done = function() {
+        const old = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(function(){ btn.textContent = old; }, 1200);
+      };
+      const plain = lastSharePlain;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(plain).then(done).catch(function(){ fallbackCopy(plain, done); });
+      } else fallbackCopy(plain, done);
+    }
+    function fallbackCopy(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      ta.remove(); done();
+    }
+
+    function showLocked(data) {
+      initMap();
+      document.getElementById('top-bar').classList.add('show');
+      document.getElementById('prompt').style.display = 'none';
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('round-result').classList.remove('show');
+      const raw = data.scores.reduce(function(a,b){ return a+b; }, 0);
+      const total = raw * 2;
+      document.getElementById('running-total').textContent = total + ' / 1000';
+      roundIndex = 5;
+      renderDots();
+      document.getElementById('locked-score').textContent = total + ' / 1000';
+      const message = data.message || scoreMessage(total);
+      document.getElementById('locked-break').textContent = message;
+      const names = data.names || roundList.map(function(x){ return x.name; });
+      document.getElementById('locked-list').innerHTML = recapHtml(names, data.scores, data.guesses);
+      document.body.classList.add('endgame');
+      paintShareBox(document.getElementById('locked-share'), data.scores, message);
+      document.getElementById('locked').classList.add('show');
+      setStatus('Already finished today’s five.');
+      if (data.guesses && data.guesses.length) showAllPins(data.guesses);
+    }
+
+    document.getElementById('submit-btn').onclick = function() { unlockAudio(); submitGuess(); };
+    document.getElementById('next-btn').onclick = nextLocation;
+    document.getElementById('copy-btn').onclick = function() { copyShare(this); };
+    document.getElementById('locked-copy').onclick = function() { copyShare(this); };
+    (function() {
+      const modal = document.getElementById('credits-modal');
+      const fact = document.getElementById('fact-modal');
+      const back = document.getElementById('credits-backdrop');
+      function openCredits() { fact.classList.remove('show'); modal.classList.add('show'); back.classList.add('show'); }
+      function closeOverlays() { modal.classList.remove('show'); fact.classList.remove('show'); back.classList.remove('show'); }
+      document.getElementById('info-btn').onclick = openCredits;
+      document.getElementById('credits-close').onclick = closeOverlays;
+      document.getElementById('fact-close').onclick = closeOverlays;
+      back.onclick = closeOverlays;
+      function onRecapClick(e) {
+        const el = e.target.closest('.recap-name.has-fact');
+        if (el && el.getAttribute('data-name')) openFact(el.getAttribute('data-name'));
+      }
+      document.getElementById('recap-list').addEventListener('click', onRecapClick);
+      document.getElementById('locked-list').addEventListener('click', onRecapClick);
+    })();
+    document.body.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+    document.body.addEventListener('click', unlockAudio, { once: true });
+
+    const existing = loadPlayed();
+    if (existing) {
+      showLocked(existing);
+    } else {
+      showGuessing();
+    }
+  </script>
+</body>
+</html>
